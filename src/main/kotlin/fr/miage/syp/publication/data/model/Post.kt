@@ -12,7 +12,7 @@ data class Post(
     @Field(name = "author_id") val authorId: UUID,
     @Field(name = "content") val content: String?,
     @Field(name = "published_at") val publishedAt: Instant,
-    @Field(name = "image_id") val imageId: Long,
+    @Field(name = "image_id") val imageId: Long?,
     @Field("is_draft") val isDraft: Boolean,
     @Field(name = "liked_by") val likedBy: List<UUID>,
 )
