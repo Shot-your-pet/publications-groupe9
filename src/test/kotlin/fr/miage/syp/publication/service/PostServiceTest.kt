@@ -169,7 +169,7 @@ class PostServiceTest {
                 newId, uuid, challengeId, null, now, null, emptyList()
             )
 
-            doReturn(newId).`when`(snowflakeIdGenerator).nextId(anyLong(), anyLong())
+            doReturn(newId).`when`(snowflakeIdGenerator).nextId(anyLong())
             doReturn(createdPost).`when`(postRepository).save(createdPost)
 
             val createdId = postService.createDraftedPostForUser(uuid, challengeId, null)
@@ -190,7 +190,7 @@ class PostServiceTest {
                 newId, uuid, challengeId, "foo", now, null, emptyList()
             )
 
-            doReturn(newId).`when`(snowflakeIdGenerator).nextId(anyLong(), anyLong())
+            doReturn(newId).`when`(snowflakeIdGenerator).nextId(anyLong())
             doReturn(createdPost).`when`(postRepository).save(createdPost)
 
             val createdId = postService.createDraftedPostForUser(uuid, challengeId, "foo")

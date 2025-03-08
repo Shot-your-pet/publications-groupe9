@@ -30,7 +30,7 @@ class PostService private constructor(
         return if (postRepository.existsPostByAuthorIdAndChallengeId(userId, challengeId)) {
             Result.failure(ChallengeAlreadyCompletedException())
         } else {
-            val nextId = snowflakeIdGenerator.nextId(0L, 0L)
+            val nextId = snowflakeIdGenerator.nextId(0L)
             val draftedPost = postRepository.save(
                 DataPost(nextId, userId, challengeId, content, Instant.now(), null, emptyList())
             )
