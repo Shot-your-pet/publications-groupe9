@@ -22,14 +22,13 @@ class PostService private constructor(
         val imageId = requireNotNull(it.imageId) {
             "imageId cannot be null"
         }
-        ModelPost(it.id, it.authorId, it.content, it.publishedAt, imageId)
+        ModelPost(it.id, it.authorId, it.challengeId, it.content, it.publishedAt, imageId)
     }
 
-    fun createDraftedPostForUser(userId: UUID, content: String?): Long {
+    fun createDraftedPostForUser(userId: UUID, challengeId: Long, content: String?): Long {
+        val nextId = snowflakeIdGenerator.nextId(0L, 0L)
         val draftedPost = postRepository.save(
-            DataPost(
-                snowflakeIdGenerator.nextId(0L, 0L), userId, content, Instant.now(), null, emptyList()
-            )
+            DataPost(nextId, userId, challengeId, content, Instant.now(), null, emptyList())
         )
         return draftedPost.id
     }

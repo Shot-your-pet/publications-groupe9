@@ -40,6 +40,7 @@ class PostServiceTest {
         val postEntity = Post(
             id = 1,
             authorId = authorId,
+            challengeId = Random().nextLong(),
             content = "content",
             publishedAt = Instant.now(),
             imageId = 50L,
@@ -61,6 +62,7 @@ class PostServiceTest {
         // Assert
         assertEquals(1, result.size)
         assertEquals(authorId, result[0].authorId)
+        assertEquals(postEntity.challengeId, result[0].challengeId)
         assertEquals("content", result[0].content)
         assertEquals(postEntity.publishedAt, result[0].publishedAt)
         assertEquals(imageId, result[0].imageId)
@@ -76,6 +78,7 @@ class PostServiceTest {
         val postEntity = Post(
             id = 1,
             authorId = authorId,
+            challengeId = 0L,
             content = "content",
             publishedAt = Instant.now(),
             imageId = null,
@@ -129,6 +132,7 @@ class PostServiceTest {
             Post(
                 id = it.toLong(),
                 authorId = UUID.randomUUID(),
+                challengeId = it.toLong() + 150L,
                 content = "content$it",
                 publishedAt = Instant.now(),
                 imageId = it.toLong(),
@@ -159,14 +163,15 @@ class PostServiceTest {
         withMockedInstant { now ->
             val newId = 125L
             val uuid = UUID.randomUUID()
+            val challengeId = Random().nextLong()
             val createdPost = Post(
-                newId, uuid, null, now, null, emptyList()
+                newId, uuid, challengeId, null, now, null, emptyList()
             )
 
             doReturn(newId).`when`(snowflakeIdGenerator).nextId(anyLong(), anyLong())
             doReturn(createdPost).`when`(postRepository).save(createdPost)
 
-            val createdId = postService.createDraftedPostForUser(uuid, null)
+            val createdId = postService.createDraftedPostForUser(uuid, challengeId, null)
 
             Assertions.assertEquals(newId, createdId)
             verify(postRepository, times(1)).save(createdPost)
@@ -178,14 +183,16 @@ class PostServiceTest {
         withMockedInstant { now ->
             val newId = 125L
             val uuid = UUID.randomUUID()
+            val challengeId = Random().nextLong()
+
             val createdPost = Post(
-                newId, uuid, "foo", now, null, emptyList()
+                newId, uuid, challengeId, "foo", now, null, emptyList()
             )
 
             doReturn(newId).`when`(snowflakeIdGenerator).nextId(anyLong(), anyLong())
             doReturn(createdPost).`when`(postRepository).save(createdPost)
 
-            val createdId = postService.createDraftedPostForUser(uuid, "foo")
+            val createdId = postService.createDraftedPostForUser(uuid, challengeId, "foo")
 
             Assertions.assertEquals(newId, createdId)
             verify(postRepository, times(1)).save(createdPost)
