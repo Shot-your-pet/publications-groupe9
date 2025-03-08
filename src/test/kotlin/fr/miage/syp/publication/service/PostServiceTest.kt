@@ -1,5 +1,6 @@
 package fr.miage.syp.publication.service
 
+import fr.miage.syp.publication.data.exception.ChallengeAlreadyCompletedException
 import fr.miage.syp.publication.data.model.Post
 import fr.miage.syp.publication.data.repository.PostRepository
 import fr.miage.syp.publication.services.SnowflakeIdGenerator
@@ -40,10 +41,10 @@ class PostServiceTest {
         val postEntity = Post(
             id = 1,
             authorId = authorId,
+            challengeId = Random().nextLong(),
             content = "content",
             publishedAt = Instant.now(),
             imageId = 50L,
-            isDraft = false,
             likedBy = emptyList()
         )
         val postEntityList = listOf(postEntity)
@@ -62,6 +63,7 @@ class PostServiceTest {
         // Assert
         assertEquals(1, result.size)
         assertEquals(authorId, result[0].authorId)
+        assertEquals(postEntity.challengeId, result[0].challengeId)
         assertEquals("content", result[0].content)
         assertEquals(postEntity.publishedAt, result[0].publishedAt)
         assertEquals(imageId, result[0].imageId)
@@ -77,10 +79,10 @@ class PostServiceTest {
         val postEntity = Post(
             id = 1,
             authorId = authorId,
+            challengeId = 0L,
             content = "content",
             publishedAt = Instant.now(),
             imageId = null,
-            isDraft = true,
             likedBy = emptyList()
         )
         val postEntityList = listOf(postEntity)
@@ -131,10 +133,10 @@ class PostServiceTest {
             Post(
                 id = it.toLong(),
                 authorId = UUID.randomUUID(),
+                challengeId = it.toLong() + 150L,
                 content = "content$it",
                 publishedAt = Instant.now(),
                 imageId = it.toLong(),
-                isDraft = false,
                 likedBy = emptyList()
             )
         }
@@ -162,16 +164,17 @@ class PostServiceTest {
         withMockedInstant { now ->
             val newId = 125L
             val uuid = UUID.randomUUID()
+            val challengeId = Random().nextLong()
             val createdPost = Post(
-                newId, uuid, null, now, null, true, emptyList()
+                newId, uuid, challengeId, null, now, null, emptyList()
             )
 
-            doReturn(newId).`when`(snowflakeIdGenerator).nextId(anyLong(), anyLong())
+            doReturn(newId).`when`(snowflakeIdGenerator).nextId(anyLong())
             doReturn(createdPost).`when`(postRepository).save(createdPost)
 
-            val createdId = postService.createDraftedPostForUser(uuid, null)
+            val createdId = postService.createDraftedPostForUser(uuid, challengeId, null)
 
-            Assertions.assertEquals(newId, createdId)
+            Assertions.assertEquals(newId, createdId.getOrThrow())
             verify(postRepository, times(1)).save(createdPost)
         }
     }
@@ -181,17 +184,38 @@ class PostServiceTest {
         withMockedInstant { now ->
             val newId = 125L
             val uuid = UUID.randomUUID()
+            val challengeId = Random().nextLong()
+
             val createdPost = Post(
-                newId, uuid, "foo", now, null, true, emptyList()
+                newId, uuid, challengeId, "foo", now, null, emptyList()
             )
 
-            doReturn(newId).`when`(snowflakeIdGenerator).nextId(anyLong(), anyLong())
+            doReturn(newId).`when`(snowflakeIdGenerator).nextId(anyLong())
             doReturn(createdPost).`when`(postRepository).save(createdPost)
 
-            val createdId = postService.createDraftedPostForUser(uuid, "foo")
+            val createdId = postService.createDraftedPostForUser(uuid, challengeId, "foo")
 
-            Assertions.assertEquals(newId, createdId)
+            Assertions.assertEquals(newId, createdId.getOrThrow())
             verify(postRepository, times(1)).save(createdPost)
+        }
+    }
+
+    @Test
+    fun `create post with same challenge should fail`() {
+        withMockedInstant { now ->
+            val newId = 125L
+            val uuid = UUID.randomUUID()
+            val challengeId = Random().nextLong()
+
+            val createdPost = Post(
+                newId, uuid, challengeId, "foo", now, null, emptyList()
+            )
+
+            doReturn(true).`when`(postRepository).existsPostByAuthorIdAndChallengeId(uuid, challengeId)
+            val createdId = postService.createDraftedPostForUser(uuid, challengeId, "foo")
+
+            Assertions.assertTrue(createdId.exceptionOrNull() is ChallengeAlreadyCompletedException)
+            verify(postRepository, times(0)).save(createdPost)
         }
     }
 

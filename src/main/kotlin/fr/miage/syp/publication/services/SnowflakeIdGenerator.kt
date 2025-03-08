@@ -1,6 +1,7 @@
 package fr.miage.syp.publication.services
 
 import org.springframework.stereotype.Component
+import java.security.SecureRandom
 import java.util.concurrent.atomic.AtomicLong
 
 
@@ -13,15 +14,16 @@ internal class SnowflakeIdGenerator {
     private val lastTimestamp = AtomicLong(-1L)
     private val sequence = AtomicLong(0L)
 
+    private val machineId = SecureRandom().nextLong()
+
     /**
      * Generates the next unique Snowflake ID.
      *
-     * @param machineId    Unique identifier for the machine (0-31)
      * @param datacenterId Unique identifier for the datacenter (0-31)
      * @return A globally unique 64-bit ID
      */
     @Synchronized
-    fun nextId(machineId: Long, datacenterId: Long): Long {
+    fun nextId(datacenterId: Long): Long {
         var timestamp = System.currentTimeMillis()
         // If the timestamp is the same as the previous one, increment sequence
         if (timestamp == lastTimestamp.get()) {
