@@ -28,7 +28,7 @@ class PostService private constructor(
     fun createDraftedPostForUser(userId: UUID, content: String?): Long {
         val draftedPost = postRepository.save(
             DataPost(
-                snowflakeIdGenerator.nextId(0L, 0L), userId, content, Instant.now(), null, true, emptyList()
+                snowflakeIdGenerator.nextId(0L, 0L), userId, content, Instant.now(), null, emptyList()
             )
         )
         return draftedPost.id
