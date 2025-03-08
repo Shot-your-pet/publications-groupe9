@@ -43,7 +43,6 @@ class PostServiceTest {
             content = "content",
             publishedAt = Instant.now(),
             imageId = 50L,
-            isDraft = false,
             likedBy = emptyList()
         )
         val postEntityList = listOf(postEntity)
@@ -80,7 +79,6 @@ class PostServiceTest {
             content = "content",
             publishedAt = Instant.now(),
             imageId = null,
-            isDraft = true,
             likedBy = emptyList()
         )
         val postEntityList = listOf(postEntity)
@@ -134,7 +132,6 @@ class PostServiceTest {
                 content = "content$it",
                 publishedAt = Instant.now(),
                 imageId = it.toLong(),
-                isDraft = false,
                 likedBy = emptyList()
             )
         }
@@ -163,7 +160,7 @@ class PostServiceTest {
             val newId = 125L
             val uuid = UUID.randomUUID()
             val createdPost = Post(
-                newId, uuid, null, now, null, true, emptyList()
+                newId, uuid, null, now, null, emptyList()
             )
 
             doReturn(newId).`when`(snowflakeIdGenerator).nextId(anyLong(), anyLong())
@@ -182,7 +179,7 @@ class PostServiceTest {
             val newId = 125L
             val uuid = UUID.randomUUID()
             val createdPost = Post(
-                newId, uuid, "foo", now, null, true, emptyList()
+                newId, uuid, "foo", now, null, emptyList()
             )
 
             doReturn(newId).`when`(snowflakeIdGenerator).nextId(anyLong(), anyLong())
