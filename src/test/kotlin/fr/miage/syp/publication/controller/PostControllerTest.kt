@@ -45,8 +45,9 @@ class PostControllerTest {
     @WithMockUser(username = USER_UUID)
     fun `test create post with authentication no content create object`() {
         val newId = random.nextLong()
-        doReturn(newId).`when`(postService).createDraftedPostForUser(UUID.fromString(USER_UUID), 0, null)
-        val content = mapper.writeValueAsString(NewPost(null))
+        val challengeId = random.nextLong()
+        doReturn(newId).`when`(postService).createDraftedPostForUser(UUID.fromString(USER_UUID), challengeId, null)
+        val content = mapper.writeValueAsString(NewPost(null, challengeId))
         mvc.perform(
             MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
         ).andExpect(MockMvcResultMatchers.status().isCreated).andExpect(jsonPath("$.id").value(newId))
@@ -60,7 +61,7 @@ class PostControllerTest {
         val challengeId = random.nextLong()
         doReturn(newId).`when`(postService)
             .createDraftedPostForUser(UUID.fromString(USER_UUID), challengeId, createPostContent)
-        val content = mapper.writeValueAsString(NewPost(createPostContent))
+        val content = mapper.writeValueAsString(NewPost(createPostContent, challengeId))
         mvc.perform(
             MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
         ).andExpect(MockMvcResultMatchers.status().isCreated).andExpect(jsonPath("$.id").value(newId))

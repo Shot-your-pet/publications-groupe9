@@ -22,9 +22,7 @@ class PostController private constructor(
     fun insertPost(@RequestBody newPost: NewPost, authentication: Authentication): ResponseEntity<DraftedPost> {
         val userId = UUID.fromString(authentication.name)
         val draftedPostId = postService.createDraftedPostForUser(
-            userId,
-            0L, // TODO
-            newPost.content
+            userId, newPost.challengeId, newPost.content
         )
         val createdUri =
             ServletUriComponentsBuilder.fromCurrentContextPath().path("/posts/${draftedPostId}").build().toUri()
