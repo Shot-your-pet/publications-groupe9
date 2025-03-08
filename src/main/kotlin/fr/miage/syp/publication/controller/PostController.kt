@@ -1,8 +1,10 @@
 package fr.miage.syp.publication.controller
 
+import fr.miage.syp.publication.data.exception.ChallengeAlreadyCompletedException
 import fr.miage.syp.publication.model.DraftedPost
 import fr.miage.syp.publication.model.NewPost
 import fr.miage.syp.publication.service.PostService
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.PostMapping
@@ -21,11 +23,18 @@ class PostController private constructor(
     @PostMapping("/")
     fun insertPost(@RequestBody newPost: NewPost, authentication: Authentication): ResponseEntity<DraftedPost> {
         val userId = UUID.fromString(authentication.name)
-        val draftedPostId = postService.createDraftedPostForUser(
+        return postService.createDraftedPostForUser(
             userId, newPost.challengeId, newPost.content
-        )
-        val createdUri =
-            ServletUriComponentsBuilder.fromCurrentContextPath().path("/posts/${draftedPostId}").build().toUri()
-        return ResponseEntity.created(createdUri).body(DraftedPost(draftedPostId))
+        ).fold(onSuccess = { draftedPostId ->
+            val createdUri =
+                ServletUriComponentsBuilder.fromCurrentContextPath().path("/posts/${draftedPostId}").build().toUri()
+            ResponseEntity.created(createdUri).body(DraftedPost(draftedPostId))
+        }, onFailure = {
+            if (it is ChallengeAlreadyCompletedException) {
+                ResponseEntity.status(HttpStatus.CONFLICT).build()
+            } else {
+                ResponseEntity.internalServerError().build()
+            }
+        })
     }
 }

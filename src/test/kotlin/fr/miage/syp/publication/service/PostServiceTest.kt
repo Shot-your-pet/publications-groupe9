@@ -1,5 +1,6 @@
 package fr.miage.syp.publication.service
 
+import fr.miage.syp.publication.data.exception.ChallengeAlreadyCompletedException
 import fr.miage.syp.publication.data.model.Post
 import fr.miage.syp.publication.data.repository.PostRepository
 import fr.miage.syp.publication.services.SnowflakeIdGenerator
@@ -173,7 +174,7 @@ class PostServiceTest {
 
             val createdId = postService.createDraftedPostForUser(uuid, challengeId, null)
 
-            Assertions.assertEquals(newId, createdId)
+            Assertions.assertEquals(newId, createdId.getOrThrow())
             verify(postRepository, times(1)).save(createdPost)
         }
     }
@@ -194,8 +195,27 @@ class PostServiceTest {
 
             val createdId = postService.createDraftedPostForUser(uuid, challengeId, "foo")
 
-            Assertions.assertEquals(newId, createdId)
+            Assertions.assertEquals(newId, createdId.getOrThrow())
             verify(postRepository, times(1)).save(createdPost)
+        }
+    }
+
+    @Test
+    fun `create post with same challenge should fail`() {
+        withMockedInstant { now ->
+            val newId = 125L
+            val uuid = UUID.randomUUID()
+            val challengeId = Random().nextLong()
+
+            val createdPost = Post(
+                newId, uuid, challengeId, "foo", now, null, emptyList()
+            )
+
+            doReturn(true).`when`(postRepository).existsPostByAuthorIdAndChallengeId(uuid, challengeId)
+            val createdId = postService.createDraftedPostForUser(uuid, challengeId, "foo")
+
+            Assertions.assertTrue(createdId.exceptionOrNull() is ChallengeAlreadyCompletedException)
+            verify(postRepository, times(0)).save(createdPost)
         }
     }
 

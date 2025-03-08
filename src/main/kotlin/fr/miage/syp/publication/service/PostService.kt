@@ -1,5 +1,6 @@
 package fr.miage.syp.publication.service
 
+import fr.miage.syp.publication.data.exception.ChallengeAlreadyCompletedException
 import fr.miage.syp.publication.data.repository.PostRepository
 import fr.miage.syp.publication.services.SnowflakeIdGenerator
 import org.springframework.data.domain.PageRequest
@@ -25,11 +26,15 @@ class PostService private constructor(
         ModelPost(it.id, it.authorId, it.challengeId, it.content, it.publishedAt, imageId)
     }
 
-    fun createDraftedPostForUser(userId: UUID, challengeId: Long, content: String?): Long {
-        val nextId = snowflakeIdGenerator.nextId(0L, 0L)
-        val draftedPost = postRepository.save(
-            DataPost(nextId, userId, challengeId, content, Instant.now(), null, emptyList())
-        )
-        return draftedPost.id
+    fun createDraftedPostForUser(userId: UUID, challengeId: Long, content: String?): Result<Long> {
+        return if (postRepository.existsPostByAuthorIdAndChallengeId(userId, challengeId)) {
+            Result.failure(ChallengeAlreadyCompletedException())
+        } else {
+            val nextId = snowflakeIdGenerator.nextId(0L, 0L)
+            val draftedPost = postRepository.save(
+                DataPost(nextId, userId, challengeId, content, Instant.now(), null, emptyList())
+            )
+            Result.success(draftedPost.id)
+        }
     }
 }
