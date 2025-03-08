@@ -1,6 +1,7 @@
 package fr.miage.syp.publication.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import fr.miage.syp.publication.model.NewPost
 import fr.miage.syp.publication.service.PostService
 import org.junit.jupiter.api.Test
@@ -28,7 +29,7 @@ class PostControllerTest {
     @Autowired
     lateinit var mvc: MockMvc
 
-    private val mapper = ObjectMapper()
+    private val mapper = ObjectMapper().registerKotlinModule()
 
     @MockitoBean
     lateinit var postService: PostService
