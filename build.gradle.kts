@@ -1,3 +1,5 @@
+import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
+
 plugins {
     kotlin("jvm") version "1.9.25"
     kotlin("plugin.spring") version "1.9.25"
@@ -42,4 +44,28 @@ kotlin {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+
+tasks.withType<BootBuildImage> {
+    val dockerImageName = System.getenv("DOCKER_IMAGE")
+    if (!dockerImageName.isNullOrEmpty()) {
+        this.imageName.set(dockerImageName)
+    }
+
+    val envTags = System.getenv("DOCKER_TAGS")
+    if (!envTags.isNullOrEmpty()) {
+        val realName = imageName.get().let {
+            val lastIndex = it.lastIndexOf(":")
+            it.substring(0, lastIndex)
+        }
+        this.tags.addAll(
+            envTags.split(",").map { "${realName}:$it" })
+    }
+
+    System.getenv("USERNAME")?.let { username ->
+        docker.publishRegistry.url = "ghcr.io"
+        docker.publishRegistry.username = username
+        docker.publishRegistry.password = System.getenv("GITHUB_TOKEN") ?: "INVALID_PASSWORD"
+    }
 }
