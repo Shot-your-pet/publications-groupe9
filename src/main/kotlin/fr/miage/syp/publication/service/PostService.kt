@@ -50,15 +50,24 @@ class PostService private constructor(
         }
     }
 
-    fun setImageIdForPost(postId: Long, imageId: Long): Result<Unit> {
+    fun setImageIdForPost(postId: Long, imageId: Long): Result<Post.PublishedPost> {
         val post = postRepository.findByIdOrNull(postId)
         return if (post == null) {
             Result.failure(PostNotFoundException())
         } else if (post.imageId != null) {
             Result.failure(PostAlreadyPublishedException())
         } else {
-            postRepository.save(post.copy(imageId = imageId))
-            Result.success(Unit)
+            val newPost = postRepository.save(post.copy(imageId = imageId))
+            Result.success(
+                Post.PublishedPost(
+                    newPost.id,
+                    newPost.authorId,
+                    newPost.challengeId,
+                    newPost.content,
+                    newPost.publishedAt,
+                    imageId
+                )
+            )
         }
     }
 }
