@@ -3,7 +3,6 @@ package fr.miage.syp.publication.controller
 import fr.miage.syp.publication.data.exception.ChallengeAlreadyCompletedException
 import fr.miage.syp.publication.model.NewPost
 import fr.miage.syp.publication.model.Post
-import fr.miage.syp.publication.model.Post.PublishedPost
 import fr.miage.syp.publication.service.PostService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -18,6 +17,10 @@ import java.util.*
 class PostController private constructor(
     private val postService: PostService,
 ) {
+    @GetMapping("/{postId}")
+    fun getPost(@PathVariable postId: Long): ResponseEntity<Post> =
+        postService.getPost(postId)?.let { ResponseEntity.ok(it) } ?: ResponseEntity.notFound().build()
+
     @PostMapping("/")
     fun insertPost(@RequestBody newPost: NewPost, authentication: Authentication): ResponseEntity<Post.DraftedPost> {
         val userId = UUID.fromString(authentication.name)
