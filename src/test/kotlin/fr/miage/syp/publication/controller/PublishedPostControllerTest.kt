@@ -17,8 +17,8 @@ import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 import java.time.Instant
 import java.util.*
 
@@ -41,8 +41,53 @@ class PublishedPostControllerTest {
     private val random = Random()
 
     @Test
+    fun `getPost without authentication is unauthorized`() {
+        mvc.perform(MockMvcRequestBuilders.post("/posts/${random.nextLong()}")).andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    @WithMockUser(username = USER_UUID)
+    fun `getPost should return 200 OK when drafted post is found`() {
+        val postId = random.nextLong()
+        val authorId = UUID.randomUUID()
+        val challengeId = random.nextLong()
+        val post = Post.DraftedPost(postId, authorId, challengeId, "Content", Instant.now())
+        doReturn(post).`when`(postService).getPost(postId)
+        mvc.perform(
+            get("/posts/$postId").contentType(MediaType.APPLICATION_JSON)
+        ).andExpect(status().isOk).andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$.drafted.id").value(postId)).andExpect(jsonPath("$.drafted.content").value("Content"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_UUID)
+    fun `getPost should return 200 OK when published post is found`() {
+        val postId = random.nextLong()
+        val authorId = UUID.randomUUID()
+        val challengeId = random.nextLong()
+        val imageId = random.nextLong()
+        val post = Post.PublishedPost(postId, authorId, challengeId, "Content", Instant.now(), imageId)
+        doReturn(post).`when`(postService).getPost(postId)
+        mvc.perform(
+            get("/posts/$postId").contentType(MediaType.APPLICATION_JSON)
+        ).andExpect(status().isOk).andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$.published.id").value(postId))
+            .andExpect(jsonPath("$.published.content").value("Content"))
+    }
+
+    @Test
+    @WithMockUser(username = USER_UUID)
+    fun `getPost should return 404 Not Found when post is not found`() {
+        val postId = random.nextLong()
+        doReturn(null).`when`(postService).getPost(postId)
+        mvc.perform(
+            get("/posts/$postId").contentType(MediaType.APPLICATION_JSON)
+        ).andExpect(status().isNotFound)
+    }
+
+    @Test
     fun `test create post without authentication is unauthorized`() {
-        mvc.perform(MockMvcRequestBuilders.post("/posts/")).andExpect(MockMvcResultMatchers.status().isUnauthorized)
+        mvc.perform(MockMvcRequestBuilders.post("/posts/")).andExpect(status().isUnauthorized)
     }
 
     @Test
@@ -61,7 +106,7 @@ class PublishedPostControllerTest {
         val content = mapper.writeValueAsString(NewPost(null, challengeId))
         mvc.perform(
             MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
-        ).andExpect(MockMvcResultMatchers.status().isCreated).andExpect(jsonPath("$.drafted.id").value(newId))
+        ).andExpect(status().isCreated).andExpect(jsonPath("$.drafted.id").value(newId))
     }
 
     @Test
@@ -81,7 +126,7 @@ class PublishedPostControllerTest {
         val content = mapper.writeValueAsString(NewPost(createPostContent, challengeId))
         mvc.perform(
             MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
-        ).andExpect(MockMvcResultMatchers.status().isCreated).andExpect(jsonPath("$.drafted.id").value(newId))
+        ).andExpect(status().isCreated).andExpect(jsonPath("$.drafted.id").value(newId))
     }
 
     @Test
@@ -94,6 +139,6 @@ class PublishedPostControllerTest {
         val content = mapper.writeValueAsString(NewPost(createPostContent, challengeId))
         mvc.perform(
             MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
-        ).andExpect(MockMvcResultMatchers.status().isConflict)
+        ).andExpect(status().isConflict)
     }
 }
