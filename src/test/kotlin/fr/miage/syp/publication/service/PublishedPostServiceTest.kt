@@ -21,7 +21,7 @@ import kotlin.test.assertTrue
 
 
 @SpringBootTest
-class PostServiceTest {
+class PublishedPostServiceTest {
     @MockitoBean
     internal lateinit var postRepository: PostRepository
 
@@ -174,7 +174,7 @@ class PostServiceTest {
 
             val createdId = postService.createDraftedPostForUser(uuid, challengeId, null)
 
-            Assertions.assertEquals(newId, createdId.getOrThrow())
+            Assertions.assertEquals(newId, createdId.getOrThrow().id)
             verify(postRepository, times(1)).save(createdPost)
         }
     }
@@ -195,7 +195,7 @@ class PostServiceTest {
 
             val createdId = postService.createDraftedPostForUser(uuid, challengeId, "foo")
 
-            Assertions.assertEquals(newId, createdId.getOrThrow())
+            Assertions.assertEquals(newId, createdId.getOrThrow().id)
             verify(postRepository, times(1)).save(createdPost)
         }
     }
