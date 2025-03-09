@@ -14,10 +14,13 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.test.context.bean.override.mockito.MockitoBean
+import java.security.SecureRandom
 import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import fr.miage.syp.publication.model.Post as ModelPost
 
 
 @SpringBootTest
@@ -30,6 +33,58 @@ class PublishedPostServiceTest {
 
     @Autowired
     lateinit var postService: PostService
+
+    private val random = SecureRandom()
+
+    @Test
+    fun `getPost should return PublishedPost when imageId is not null`() {
+        val postId = random.nextLong()
+        val post = Post(
+            id = postId,
+            authorId = UUID.randomUUID(),
+            challengeId = random.nextLong(),
+            content = "Content",
+            publishedAt = Instant.now(),
+            imageId = random.nextLong(),
+            likedBy = emptyList()
+        )
+        doReturn(Optional.of(post)).`when`(postRepository).findById(postId)
+        val result = postService.getPost(postId)
+        assertEquals(
+            ModelPost.PublishedPost(
+                postId, post.authorId, post.challengeId, post.content, post.publishedAt, post.imageId!!
+            ),
+            result,
+        )
+    }
+
+    @Test
+    fun `getPost should return DraftedPost when imageId is null`() {
+        val postId = random.nextLong()
+        val post = Post(
+            id = postId,
+            authorId = UUID.randomUUID(),
+            challengeId = random.nextLong(),
+            content = "Content",
+            publishedAt = Instant.now(),
+            imageId = null,
+            likedBy = emptyList()
+        )
+        doReturn(Optional.of(post)).`when`(postRepository).findById(postId)
+        val result = postService.getPost(postId)
+        assertEquals(
+            ModelPost.DraftedPost(postId, post.authorId, post.challengeId, post.content, post.publishedAt), result
+        )
+    }
+
+    @Test
+    fun `getPost should return null when post is not found`() {
+        val postId = random.nextLong()
+        doReturn(Optional.empty<Post>()).`when`(postRepository).findById(postId)
+        val result = postService.getPost(postId)
+        assertNull(result)
+    }
+
 
     @Test
     fun `should return list of ModelPost when posts are found`() {
