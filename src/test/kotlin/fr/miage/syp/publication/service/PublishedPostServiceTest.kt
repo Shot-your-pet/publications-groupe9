@@ -132,7 +132,6 @@ class PublishedPostServiceTest {
         val page = 0
         val maxSize = 10
         val authorId = UUID.randomUUID()
-        val imageId = 50L
         val postEntity = Post(
             id = 1,
             authorId = authorId,
@@ -321,11 +320,21 @@ class PublishedPostServiceTest {
             likedBy = emptyList()
         )
         doReturn(Optional.of(post)).`when`(postRepository).findById(postId)
-        doReturn(post).`when`(postRepository).save(post.copy(imageId = imageId))
+        val newPost = post.copy(imageId = imageId)
+        doReturn(newPost).`when`(postRepository).save(newPost)
 
         val result = postService.setImageIdForPost(postId, imageId)
         assertTrue(result.isSuccess)
-        assertEquals(Unit, result.getOrNull())
+        assertEquals(
+            ModelPost.PublishedPost(
+                newPost.id,
+                newPost.authorId,
+                newPost.challengeId,
+                newPost.content,
+                newPost.publishedAt,
+                newPost.imageId!!
+            ), result.getOrNull()
+        )
         verify(postRepository).save(post.copy(imageId = imageId))
     }
 
