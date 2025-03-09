@@ -1,6 +1,8 @@
 package fr.miage.syp.publication.service
 
 import fr.miage.syp.publication.data.exception.ChallengeAlreadyCompletedException
+import fr.miage.syp.publication.data.exception.PostAlreadyPublishedException
+import fr.miage.syp.publication.data.exception.PostNotFoundException
 import fr.miage.syp.publication.data.model.Post
 import fr.miage.syp.publication.data.repository.PostRepository
 import fr.miage.syp.publication.services.SnowflakeIdGenerator
@@ -272,6 +274,59 @@ class PublishedPostServiceTest {
             Assertions.assertTrue(createdId.exceptionOrNull() is ChallengeAlreadyCompletedException)
             verify(postRepository, times(0)).save(createdPost)
         }
+    }
+
+    @Test
+    fun `setImageIdForPost should return failure when post is not found`() {
+        val postId = random.nextLong()
+        val imageId = random.nextLong()
+        doReturn(Optional.empty<Post>()).`when`(postRepository).findById(postId)
+        val result = postService.setImageIdForPost(postId, imageId)
+        assertTrue(result.isFailure)
+        assertEquals(PostNotFoundException::class, result.exceptionOrNull()!!::class)
+    }
+
+    @Test
+    fun `setImageIdForPost should return failure when post is already published`() {
+        val postId = random.nextLong()
+        val imageId = random.nextLong()
+        val authorId = UUID.randomUUID()
+        val post = Post(
+            id = postId,
+            authorId = authorId,
+            challengeId = random.nextLong(),
+            content = "Content",
+            publishedAt = Instant.now(),
+            imageId = imageId,
+            likedBy = emptyList()
+        )
+        doReturn(Optional.of(post)).`when`(postRepository).findById(postId)
+        val result = postService.setImageIdForPost(postId, imageId)
+        assertTrue(result.isFailure)
+        assertEquals(PostAlreadyPublishedException::class, result.exceptionOrNull()!!::class)
+    }
+
+    @Test
+    fun `setImageIdForPost should return success when imageId is set successfully`() {
+        val postId = random.nextLong()
+        val imageId = random.nextLong()
+        val authorId = UUID.randomUUID()
+        val post = Post(
+            id = postId,
+            authorId = authorId,
+            challengeId = random.nextLong(),
+            content = "Content",
+            publishedAt = Instant.now(),
+            imageId = null,
+            likedBy = emptyList()
+        )
+        doReturn(Optional.of(post)).`when`(postRepository).findById(postId)
+        doReturn(post).`when`(postRepository).save(post.copy(imageId = imageId))
+
+        val result = postService.setImageIdForPost(postId, imageId)
+        assertTrue(result.isSuccess)
+        assertEquals(Unit, result.getOrNull())
+        verify(postRepository).save(post.copy(imageId = imageId))
     }
 
     fun withMockedInstant(block: (now: Instant) -> Unit) {
