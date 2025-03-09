@@ -17,12 +17,12 @@ class PublicationConfig {
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain =
         http.csrf { it.disable() }.authorizeHttpRequests { auth ->
             auth.requestMatchers(HttpMethod.OPTIONS, "/posts/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/posts/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/posts/").authenticated()
                 .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll() // todo
                 .anyRequest().denyAll()
         }.oauth2ResourceServer { oauth2ResourceServer -> oauth2ResourceServer.jwt(Customizer.withDefaults()) }
             .cors(Customizer.withDefaults()).build()
-
 
     @Bean
     protected fun corsConfigurationSource(): CorsConfigurationSource {
