@@ -1,6 +1,8 @@
 package fr.miage.syp.publication.service
 
 import fr.miage.syp.publication.data.exception.ChallengeAlreadyCompletedException
+import fr.miage.syp.publication.data.exception.PostAlreadyPublishedException
+import fr.miage.syp.publication.data.exception.PostNotFoundException
 import fr.miage.syp.publication.data.repository.PostRepository
 import fr.miage.syp.publication.model.Post
 import fr.miage.syp.publication.services.SnowflakeIdGenerator
@@ -45,6 +47,18 @@ class PostService private constructor(
                 DataPost(nextId, userId, challengeId, content, publishedAt, null, emptyList())
             )
             Result.success(Post.DraftedPost(nextId, userId, challengeId, content, publishedAt))
+        }
+    }
+
+    fun setImageIdForPost(postId: Long, imageId: Long): Result<Unit> {
+        val post = postRepository.findByIdOrNull(postId)
+        return if (post == null) {
+            Result.failure(PostNotFoundException())
+        } else if (post.imageId != null) {
+            Result.failure(PostAlreadyPublishedException())
+        } else {
+            postRepository.save(post.copy(imageId = imageId))
+            Result.success(Unit)
         }
     }
 }
