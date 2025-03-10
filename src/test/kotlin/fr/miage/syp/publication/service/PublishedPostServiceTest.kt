@@ -277,6 +277,14 @@ class PublishedPostServiceTest {
     }
 
     @Test
+    fun `remove post call repository with good id`() {
+        val id = random.nextLong()
+        doNothing().`when`(postRepository).deleteById(id)
+        postService.removePost(id)
+        verify(postRepository, times(1)).deleteById(id)
+    }
+
+    @Test
     fun `setImageIdForPost should return failure when post is not found`() {
         val postId = random.nextLong()
         val imageId = random.nextLong()
