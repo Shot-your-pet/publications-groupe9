@@ -37,16 +37,18 @@ class PostService private constructor(
         Post.PublishedPost(it.id, it.authorId, it.challengeId, it.content, it.publishedAt, imageId)
     }
 
-    fun createDraftedPostForUser(userId: UUID, challengeId: Long, content: String?): Result<Post.DraftedPost> {
+    fun createPostForUser(
+        userId: UUID, challengeId: Long, content: String?, imageId: Long
+    ): Result<Post.PublishedPost> {
         return if (postRepository.existsPostByAuthorIdAndChallengeId(userId, challengeId)) {
             Result.failure(ChallengeAlreadyCompletedException())
         } else {
             val nextId = snowflakeIdGenerator.nextId(0L)
             val publishedAt = Instant.now()
             postRepository.save(
-                DataPost(nextId, userId, challengeId, content, publishedAt, null, emptyList())
+                DataPost(nextId, userId, challengeId, content, publishedAt, imageId, emptyList())
             )
-            Result.success(Post.DraftedPost(nextId, userId, challengeId, content, publishedAt))
+            Result.success(Post.PublishedPost(nextId, userId, challengeId, content, publishedAt, imageId))
         }
     }
 
