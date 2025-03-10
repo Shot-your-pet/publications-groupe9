@@ -220,15 +220,16 @@ class PublishedPostServiceTest {
         withMockedInstant { now ->
             val newId = 125L
             val uuid = UUID.randomUUID()
-            val challengeId = Random().nextLong()
+            val challengeId = random.nextLong()
+            val imageId = random.nextLong()
             val createdPost = Post(
-                newId, uuid, challengeId, null, now, null, emptyList()
+                newId, uuid, challengeId, null, now, imageId, emptyList()
             )
 
             doReturn(newId).`when`(snowflakeIdGenerator).nextId(anyLong())
             doReturn(createdPost).`when`(postRepository).save(createdPost)
 
-            val createdId = postService.createDraftedPostForUser(uuid, challengeId, null)
+            val createdId = postService.createPostForUser(uuid, challengeId, null, imageId)
 
             Assertions.assertEquals(newId, createdId.getOrThrow().id)
             verify(postRepository, times(1)).save(createdPost)
@@ -241,15 +242,15 @@ class PublishedPostServiceTest {
             val newId = 125L
             val uuid = UUID.randomUUID()
             val challengeId = Random().nextLong()
-
+            val imageId = random.nextLong()
             val createdPost = Post(
-                newId, uuid, challengeId, "foo", now, null, emptyList()
+                newId, uuid, challengeId, "foo", now, imageId, emptyList()
             )
 
             doReturn(newId).`when`(snowflakeIdGenerator).nextId(anyLong())
             doReturn(createdPost).`when`(postRepository).save(createdPost)
 
-            val createdId = postService.createDraftedPostForUser(uuid, challengeId, "foo")
+            val createdId = postService.createPostForUser(uuid, challengeId, "foo", imageId)
 
             Assertions.assertEquals(newId, createdId.getOrThrow().id)
             verify(postRepository, times(1)).save(createdPost)
@@ -262,13 +263,13 @@ class PublishedPostServiceTest {
             val newId = 125L
             val uuid = UUID.randomUUID()
             val challengeId = Random().nextLong()
-
+            val imageId = random.nextLong()
             val createdPost = Post(
                 newId, uuid, challengeId, "foo", now, null, emptyList()
             )
 
             doReturn(true).`when`(postRepository).existsPostByAuthorIdAndChallengeId(uuid, challengeId)
-            val createdId = postService.createDraftedPostForUser(uuid, challengeId, "foo")
+            val createdId = postService.createPostForUser(uuid, challengeId, "foo", imageId)
 
             Assertions.assertTrue(createdId.exceptionOrNull() is ChallengeAlreadyCompletedException)
             verify(postRepository, times(0)).save(createdPost)

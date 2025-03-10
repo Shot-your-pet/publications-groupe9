@@ -96,17 +96,18 @@ class PublishedPostControllerTest {
         val newId = random.nextLong()
         val authorId = UUID.fromString(USER_UUID)
         val challengeId = random.nextLong()
+        val imageId = random.nextLong()
         doReturn(
             Result.success(
-                Post.DraftedPost(
-                    newId, authorId, challengeId, null, Instant.now()
+                Post.PublishedPost(
+                    newId, authorId, challengeId, null, Instant.now(), imageId
                 )
             )
-        ).`when`(postService).createDraftedPostForUser(authorId, challengeId, null)
-        val content = mapper.writeValueAsString(NewPost(null, challengeId))
+        ).`when`(postService).createPostForUser(authorId, challengeId, null, imageId)
+        val content = mapper.writeValueAsString(NewPost(null, challengeId, imageId))
         mvc.perform(
             MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
-        ).andExpect(status().isCreated).andExpect(jsonPath("$.drafted.id").value(newId))
+        ).andExpect(status().isCreated).andExpect(jsonPath("$.published.id").value(newId))
     }
 
     @Test
@@ -116,17 +117,18 @@ class PublishedPostControllerTest {
         val createPostContent = "bar"
         val challengeId = random.nextLong()
         val authorId = UUID.fromString(USER_UUID)
+        val imageId = random.nextLong()
         doReturn(
             Result.success(
-                Post.DraftedPost(
-                    newId, authorId, challengeId, null, Instant.now()
+                Post.PublishedPost(
+                    newId, authorId, challengeId, null, Instant.now(), imageId
                 )
             )
-        ).`when`(postService).createDraftedPostForUser(authorId, challengeId, createPostContent)
-        val content = mapper.writeValueAsString(NewPost(createPostContent, challengeId))
+        ).`when`(postService).createPostForUser(authorId, challengeId, createPostContent, imageId)
+        val content = mapper.writeValueAsString(NewPost(createPostContent, challengeId, imageId))
         mvc.perform(
             MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
-        ).andExpect(status().isCreated).andExpect(jsonPath("$.drafted.id").value(newId))
+        ).andExpect(status().isCreated).andExpect(jsonPath("$.published.id").value(newId))
     }
 
     @Test
@@ -134,9 +136,10 @@ class PublishedPostControllerTest {
     fun `test create post with authentication with already taken challenge should return conflict`() {
         val createPostContent = "bar"
         val challengeId = random.nextLong()
+        val imageId = random.nextLong()
         doReturn(Result.failure<DraftedPost>(ChallengeAlreadyCompletedException())).`when`(postService)
-            .createDraftedPostForUser(UUID.fromString(USER_UUID), challengeId, createPostContent)
-        val content = mapper.writeValueAsString(NewPost(createPostContent, challengeId))
+            .createPostForUser(UUID.fromString(USER_UUID), challengeId, createPostContent, imageId)
+        val content = mapper.writeValueAsString(NewPost(createPostContent, challengeId, imageId))
         mvc.perform(
             MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
         ).andExpect(status().isConflict)

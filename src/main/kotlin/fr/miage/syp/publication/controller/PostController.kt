@@ -22,11 +22,12 @@ class PostController private constructor(
         postService.getPost(postId)?.let { ResponseEntity.ok(it) } ?: ResponseEntity.notFound().build()
 
     @PostMapping("/")
-    fun insertPost(@RequestBody newPost: NewPost, authentication: Authentication): ResponseEntity<Post.DraftedPost> {
+    fun insertPost(@RequestBody newPost: NewPost, authentication: Authentication): ResponseEntity<Post.PublishedPost> {
         val userId = UUID.fromString(authentication.name)
-        return postService.createDraftedPostForUser(
-            userId, newPost.challengeId, newPost.content
+        return postService.createPostForUser(
+            userId, newPost.challengeId, newPost.content, newPost.imageId
         ).fold(onSuccess = { draftedPost ->
+            // TODO: send to bus
             val createdUri =
                 ServletUriComponentsBuilder.fromCurrentContextPath().path("/posts/${draftedPost.id}").build().toUri()
             ResponseEntity.created(createdUri).body(draftedPost)
