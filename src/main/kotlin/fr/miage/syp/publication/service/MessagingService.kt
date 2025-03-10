@@ -3,6 +3,7 @@ package fr.miage.syp.publication.service
 import com.fasterxml.jackson.annotation.JsonProperty
 import fr.miage.syp.publication.model.Post
 import org.slf4j.LoggerFactory
+import org.springframework.amqp.AmqpException
 import org.springframework.amqp.rabbit.annotation.RabbitListener
 import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.beans.factory.annotation.Value
@@ -39,6 +40,11 @@ class MessagingService(
             publishedPost.publishedAt,
             publishedPost.imageId
         )
+    }
+
+    @Throws(AmqpException::class)
+    fun sendPostToBus(post: Post.PublishedPost) {
+        rabbitTemplate.convertAndSend(broadcastExchangeName, PUBLISH_ROUTING_KEY, PostMessage(post))
     }
 
     @RabbitListener(queues = ["\${publish.imagePublishedQueueName}"])
