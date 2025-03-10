@@ -1,6 +1,12 @@
 package fr.miage.syp.publication.config
 
 import jakarta.servlet.DispatcherType
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import org.springframework.amqp.core.Queue
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter
+import org.springframework.amqp.support.converter.MessageConverter
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpMethod
@@ -11,8 +17,14 @@ import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
+
 @Configuration
-class PublicationConfig {
+class PublicationConfig(
+    @Value("\${publish.imagePublishedQueueName}") private val publishedImageQueueName: String,
+) {
+
+    var logger: Logger = LoggerFactory.getLogger(this::class.java)
+
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain =
         http.csrf { it.disable() }.authorizeHttpRequests { auth ->
@@ -31,5 +43,16 @@ class PublicationConfig {
             addAllowedMethod(HttpMethod.DELETE)
         })
         return source
+    }
+
+    @Bean
+    fun publishImageQueue(): Queue {
+        logger.debug("Registering queue with name \"{}\"", publishedImageQueueName)
+        return Queue(publishedImageQueueName, true, false, false)
+    }
+
+    @Bean
+    fun jsonMessageConverter(): MessageConverter {
+        return Jackson2JsonMessageConverter()
     }
 }
