@@ -26,7 +26,7 @@ import java.util.*
 
 @SpringBootTest
 @AutoConfigureMockMvc
-class PublishedPostControllerTest {
+class PostControllerTest {
     companion object {
         private const val USER_UUID = "cd4b40e4-f532-4acc-812e-9d5ed8ac1267"
     }
@@ -56,13 +56,13 @@ class PublishedPostControllerTest {
         val authorId = UUID.randomUUID()
         val challengeId = random.nextLong()
         val imageId = random.nextLong()
-        val post = Post.PublishedPost(postId, authorId, challengeId, "Content", Instant.now(), imageId)
+        val post = Post(postId, authorId, challengeId, "Content", Instant.now(), imageId)
         doReturn(post).`when`(postService).getPost(postId)
         mvc.perform(
             get("/posts/$postId").contentType(MediaType.APPLICATION_JSON)
         ).andExpect(status().isOk).andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$.published.id").value(postId))
-            .andExpect(jsonPath("$.published.content").value("Content"))
+            .andExpect(jsonPath("$.id").value(postId))
+            .andExpect(jsonPath("$.content").value("Content"))
     }
 
     @Test
@@ -88,7 +88,7 @@ class PublishedPostControllerTest {
         val authorId = UUID.fromString(USER_UUID)
         val challengeId = random.nextLong()
         val imageId = random.nextLong()
-        val post = Post.PublishedPost(
+        val post = Post(
             newId, authorId, challengeId, null, Instant.now(), imageId
         )
         doNothing().`when`(messagingService).sendPostToBus(post)
@@ -101,7 +101,7 @@ class PublishedPostControllerTest {
         val content = mapper.writeValueAsString(NewPost(null, challengeId, imageId))
         mvc.perform(
             MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
-        ).andExpect(status().isCreated).andExpect(jsonPath("$.published.id").value(newId))
+        ).andExpect(status().isCreated).andExpect(jsonPath("$.id").value(newId))
         verify(messagingService, times(1)).sendPostToBus(post)
     }
 
@@ -113,7 +113,7 @@ class PublishedPostControllerTest {
         val challengeId = random.nextLong()
         val authorId = UUID.fromString(USER_UUID)
         val imageId = random.nextLong()
-        val post = Post.PublishedPost(
+        val post = Post(
             newId, authorId, challengeId, null, Instant.now(), imageId
         )
         doReturn(
@@ -125,7 +125,7 @@ class PublishedPostControllerTest {
         val content = mapper.writeValueAsString(NewPost(createPostContent, challengeId, imageId))
         mvc.perform(
             MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
-        ).andExpect(status().isCreated).andExpect(jsonPath("$.published.id").value(newId))
+        ).andExpect(status().isCreated).andExpect(jsonPath("$.id").value(newId))
         verify(messagingService, times(1)).sendPostToBus(post)
     }
 
@@ -135,13 +135,13 @@ class PublishedPostControllerTest {
         val createPostContent = "bar"
         val challengeId = random.nextLong()
         val imageId = random.nextLong()
-        doReturn(Result.failure<Post.PublishedPost>(ChallengeAlreadyCompletedException())).`when`(postService)
+        doReturn(Result.failure<Post>(ChallengeAlreadyCompletedException())).`when`(postService)
             .createPostForUser(UUID.fromString(USER_UUID), challengeId, createPostContent, imageId)
         val content = mapper.writeValueAsString(NewPost(createPostContent, challengeId, imageId))
         mvc.perform(
             MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
         ).andExpect(status().isConflict)
-        verify(messagingService, times(0)).sendPostToBus(any<Post.PublishedPost>())
+        verify(messagingService, times(0)).sendPostToBus(any<Post>())
     }
 
     @Test
@@ -152,7 +152,7 @@ class PublishedPostControllerTest {
         val challengeId = random.nextLong()
         val authorId = UUID.fromString(USER_UUID)
         val imageId = random.nextLong()
-        val post = Post.PublishedPost(
+        val post = Post(
             newId, authorId, challengeId, null, Instant.now(), imageId
         )
         doReturn(

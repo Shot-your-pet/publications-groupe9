@@ -32,7 +32,7 @@ class MessagingServiceTest {
     fun `sendImageToBus call rabbit template with good parameters`() {
         val postId = random.nextLong()
         val imageId = random.nextLong()
-        val post = Post.PublishedPost(postId, UUID.randomUUID(), random.nextLong(), "foo", Instant.now(), imageId)
+        val post = Post(postId, UUID.randomUUID(), random.nextLong(), "foo", Instant.now(), imageId)
         val messagePost = MessagingService.PostMessage(post)
         doNothing().`when`(rabbitTemplate).convertAndSend(any(), any(), eq(messagePost))
         messageService.sendPostToBus(post)
@@ -43,7 +43,7 @@ class MessagingServiceTest {
     fun `sendImageToBus on exception propagate said exception`() {
         val postId = random.nextLong()
         val imageId = random.nextLong()
-        val post = Post.PublishedPost(postId, UUID.randomUUID(), random.nextLong(), "foo", Instant.now(), imageId)
+        val post = Post(postId, UUID.randomUUID(), random.nextLong(), "foo", Instant.now(), imageId)
         doThrow(AmqpException("foo")).`when`(rabbitTemplate)
             .convertAndSend(any(), any(), any<MessagingService.PostMessage>())
         val ex = assertThrows<AmqpException> {

@@ -17,10 +17,10 @@ class PostService private constructor(
     private val postRepository: PostRepository, private val snowflakeIdGenerator: SnowflakeIdGenerator
 ) {
     fun getPost(postId: Long): Post? = postRepository.findByIdOrNull(postId)?.let {
-        Post.PublishedPost(it.id, it.authorId, it.challengeId, it.content, it.publishedAt, it.imageId)
+        Post(it.id, it.authorId, it.challengeId, it.content, it.publishedAt, it.imageId)
     }
 
-    fun getPosts(page: Int, maxSize: Int): List<Post.PublishedPost> = postRepository.findPostByImageIdNotNull(
+    fun getPosts(page: Int, maxSize: Int): List<Post> = postRepository.findPostByImageIdNotNull(
         PageRequest.of(
             page, maxSize, Sort.by(Sort.Direction.DESC, "id")
         )
@@ -28,12 +28,12 @@ class PostService private constructor(
         val imageId = requireNotNull(it.imageId) {
             "imageId cannot be null"
         }
-        Post.PublishedPost(it.id, it.authorId, it.challengeId, it.content, it.publishedAt, imageId)
+        Post(it.id, it.authorId, it.challengeId, it.content, it.publishedAt, imageId)
     }
 
     fun createPostForUser(
         userId: UUID, challengeId: Long, content: String?, imageId: Long
-    ): Result<Post.PublishedPost> {
+    ): Result<Post> {
         return if (postRepository.existsPostByAuthorIdAndChallengeId(userId, challengeId)) {
             Result.failure(ChallengeAlreadyCompletedException())
         } else {
@@ -42,7 +42,7 @@ class PostService private constructor(
             postRepository.save(
                 DataPost(nextId, userId, challengeId, content, publishedAt, imageId, emptyList())
             )
-            Result.success(Post.PublishedPost(nextId, userId, challengeId, content, publishedAt, imageId))
+            Result.success(Post(nextId, userId, challengeId, content, publishedAt, imageId))
         }
     }
 
