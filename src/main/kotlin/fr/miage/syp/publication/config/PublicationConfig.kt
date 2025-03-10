@@ -1,5 +1,6 @@
 package fr.miage.syp.publication.config
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.servlet.DispatcherType
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -67,7 +68,7 @@ class PublicationConfig(@Value("\${publish.imagePublishedQueueName}") private va
     }
 
     @Bean
-    fun jsonMessageConverter(): MessageConverter {
-        return Jackson2JsonMessageConverter()
+    fun jsonMessageConverter(objectMapper : ObjectMapper): MessageConverter {
+        return Jackson2JsonMessageConverter(objectMapper)
     }
 }
