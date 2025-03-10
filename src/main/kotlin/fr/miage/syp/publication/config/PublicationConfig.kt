@@ -2,8 +2,6 @@ package fr.miage.syp.publication.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.servlet.DispatcherType
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.springframework.amqp.core.BindingBuilder
 import org.springframework.amqp.core.Declarables
 import org.springframework.amqp.core.FanoutExchange
@@ -23,9 +21,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 
 @Configuration
-class PublicationConfig(@Value("\${publish.imagePublishedQueueName}") private val publishedImageQueueName: String) {
-    var logger: Logger = LoggerFactory.getLogger(this::class.java)
-
+class PublicationConfig {
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain =
         http.csrf { it.disable() }.authorizeHttpRequests { auth ->
@@ -47,12 +43,6 @@ class PublicationConfig(@Value("\${publish.imagePublishedQueueName}") private va
     }
 
     @Bean
-    fun publishImageQueue(): Queue {
-        logger.debug("Registering queue with name \"{}\"", publishedImageQueueName)
-        return Queue(publishedImageQueueName, true, false, false)
-    }
-
-    @Bean
     fun broadcastBindings(
         @Value("\${publish.broadcastExchangeName}") broadcastExchangeName: String,
         @Value("\${publish.publishPostQueueName}") publishPostQueueName: String
@@ -68,7 +58,7 @@ class PublicationConfig(@Value("\${publish.imagePublishedQueueName}") private va
     }
 
     @Bean
-    fun jsonMessageConverter(objectMapper : ObjectMapper): MessageConverter {
+    fun jsonMessageConverter(objectMapper: ObjectMapper): MessageConverter {
         return Jackson2JsonMessageConverter(objectMapper)
     }
 }
