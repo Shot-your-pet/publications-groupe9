@@ -4,7 +4,9 @@ import fr.miage.syp.publication.data.exception.PostAlreadyPublishedException
 import fr.miage.syp.publication.data.exception.PostNotFoundException
 import fr.miage.syp.publication.model.Post
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.*
+import org.junit.jupiter.api.assertThrows
+import org.mockito.kotlin.*
+import org.springframework.amqp.AmqpException
 import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
@@ -13,6 +15,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.security.SecureRandom
 import java.time.Instant
 import java.util.*
+import kotlin.test.assertEquals
 
 
 @SpringBootTest
@@ -57,7 +60,7 @@ class MessagingServiceTest {
         messageService.onImageUploads(MessagingService.PublishedImageMessage(postId, imageId))
         verify(postService, times(1)).setImageIdForPost(postId, imageId)
         verify(rabbitTemplate, times(0)).convertAndSend(
-            anyString(), anyString(), any<Any>()
+            any(), any(), any<Any>()
         )
     }
 
@@ -70,8 +73,32 @@ class MessagingServiceTest {
         messageService.onImageUploads(MessagingService.PublishedImageMessage(postId, imageId))
         verify(postService, times(1)).setImageIdForPost(postId, imageId)
         verify(rabbitTemplate, times(0)).convertAndSend(
-            anyString(), anyString(), any<Any>()
+            any(), any(), any<Any>()
         )
+    }
+
+    @Test
+    fun `sendImageToBus call rabbit template with good parameters`() {
+        val postId = random.nextLong()
+        val imageId = random.nextLong()
+        val post = Post.PublishedPost(postId, UUID.randomUUID(), random.nextLong(), "foo", Instant.now(), imageId)
+        val messagePost = MessagingService.PostMessage(post)
+        doNothing().`when`(rabbitTemplate).convertAndSend(any(), any(), eq(messagePost))
+        messageService.sendPostToBus(post)
+        verify(rabbitTemplate, times(1)).convertAndSend(any(), any(), eq(messagePost))
+    }
+
+    @Test
+    fun `sendImageToBus on exception propagate said exception`() {
+        val postId = random.nextLong()
+        val imageId = random.nextLong()
+        val post = Post.PublishedPost(postId, UUID.randomUUID(), random.nextLong(), "foo", Instant.now(), imageId)
+        doThrow(AmqpException("foo")).`when`(rabbitTemplate)
+            .convertAndSend(any(), any(), any<MessagingService.PostMessage>())
+        val ex = assertThrows<AmqpException> {
+            messageService.sendPostToBus(post)
+        }
+        assertEquals("foo", ex.message)
     }
 }
 
