@@ -3,6 +3,9 @@ package fr.miage.syp.publication.config
 import jakarta.servlet.DispatcherType
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.amqp.core.BindingBuilder
+import org.springframework.amqp.core.Declarables
+import org.springframework.amqp.core.FanoutExchange
 import org.springframework.amqp.core.Queue
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter
 import org.springframework.amqp.support.converter.MessageConverter
@@ -19,10 +22,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 
 @Configuration
-class PublicationConfig(
-    @Value("\${publish.imagePublishedQueueName}") private val publishedImageQueueName: String,
-) {
-
+class PublicationConfig(@Value("\${publish.imagePublishedQueueName}") private val publishedImageQueueName: String) {
     var logger: Logger = LoggerFactory.getLogger(this::class.java)
 
     @Bean
@@ -49,6 +49,21 @@ class PublicationConfig(
     fun publishImageQueue(): Queue {
         logger.debug("Registering queue with name \"{}\"", publishedImageQueueName)
         return Queue(publishedImageQueueName, true, false, false)
+    }
+
+    @Bean
+    fun broadcastBindings(
+        @Value("\${publish.broadcastExchangeName}") broadcastExchangeName: String,
+        @Value("\${publish.publishPostQueueName}") publishPostQueueName: String
+    ): Declarables {
+        val publishPostQueue = Queue(publishPostQueueName, false)
+        val fanoutExchange = FanoutExchange(broadcastExchangeName)
+
+        return Declarables(
+            publishPostQueue,
+            fanoutExchange,
+            BindingBuilder.bind(publishPostQueue).to(fanoutExchange),
+        )
     }
 
     @Bean
