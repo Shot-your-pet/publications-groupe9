@@ -6,9 +6,11 @@ import fr.miage.syp.publication.data.exception.ChallengeAlreadyCompletedExceptio
 import fr.miage.syp.publication.model.DraftedPost
 import fr.miage.syp.publication.model.NewPost
 import fr.miage.syp.publication.model.Post
+import fr.miage.syp.publication.service.MessagingService
 import fr.miage.syp.publication.service.PostService
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.doReturn
+import org.mockito.kotlin.*
+import org.springframework.amqp.AmqpException
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
@@ -34,6 +36,9 @@ class PublishedPostControllerTest {
     lateinit var mvc: MockMvc
 
     private val mapper = ObjectMapper().registerKotlinModule()
+
+    @MockitoBean
+    lateinit var messagingService: MessagingService
 
     @MockitoBean
     lateinit var postService: PostService
@@ -88,6 +93,7 @@ class PublishedPostControllerTest {
     @Test
     fun `test create post without authentication is unauthorized`() {
         mvc.perform(MockMvcRequestBuilders.post("/posts/")).andExpect(status().isUnauthorized)
+        verify(messagingService, times(0)).sendPostToBus(any())
     }
 
     @Test
@@ -97,17 +103,21 @@ class PublishedPostControllerTest {
         val authorId = UUID.fromString(USER_UUID)
         val challengeId = random.nextLong()
         val imageId = random.nextLong()
+        val post = Post.PublishedPost(
+            newId, authorId, challengeId, null, Instant.now(), imageId
+        )
+        doNothing().`when`(messagingService).sendPostToBus(post)
+
         doReturn(
             Result.success(
-                Post.PublishedPost(
-                    newId, authorId, challengeId, null, Instant.now(), imageId
-                )
+                post
             )
         ).`when`(postService).createPostForUser(authorId, challengeId, null, imageId)
         val content = mapper.writeValueAsString(NewPost(null, challengeId, imageId))
         mvc.perform(
             MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
         ).andExpect(status().isCreated).andExpect(jsonPath("$.published.id").value(newId))
+        verify(messagingService, times(1)).sendPostToBus(post)
     }
 
     @Test
@@ -118,17 +128,20 @@ class PublishedPostControllerTest {
         val challengeId = random.nextLong()
         val authorId = UUID.fromString(USER_UUID)
         val imageId = random.nextLong()
+        val post = Post.PublishedPost(
+            newId, authorId, challengeId, null, Instant.now(), imageId
+        )
         doReturn(
             Result.success(
-                Post.PublishedPost(
-                    newId, authorId, challengeId, null, Instant.now(), imageId
-                )
+                post
             )
         ).`when`(postService).createPostForUser(authorId, challengeId, createPostContent, imageId)
+        doNothing().`when`(messagingService).sendPostToBus(post)
         val content = mapper.writeValueAsString(NewPost(createPostContent, challengeId, imageId))
         mvc.perform(
             MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
         ).andExpect(status().isCreated).andExpect(jsonPath("$.published.id").value(newId))
+        verify(messagingService, times(1)).sendPostToBus(post)
     }
 
     @Test
@@ -143,5 +156,31 @@ class PublishedPostControllerTest {
         mvc.perform(
             MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
         ).andExpect(status().isConflict)
+        verify(messagingService, times(0)).sendPostToBus(any<Post.PublishedPost>())
+    }
+
+    @Test
+    @WithMockUser(username = USER_UUID)
+    fun `test create post with authentication when rabbit error should internal server error`() {
+        val newId = random.nextLong()
+        val createPostContent = "bar"
+        val challengeId = random.nextLong()
+        val authorId = UUID.fromString(USER_UUID)
+        val imageId = random.nextLong()
+        val post = Post.PublishedPost(
+            newId, authorId, challengeId, null, Instant.now(), imageId
+        )
+        doReturn(
+            Result.success(
+                post
+            )
+        ).`when`(postService).createPostForUser(authorId, challengeId, createPostContent, imageId)
+        doThrow(AmqpException("foo")).`when`(messagingService).sendPostToBus(post)
+        doNothing().`when`(postService).removePost(post.id)
+        val content = mapper.writeValueAsString(NewPost(createPostContent, challengeId, imageId))
+        mvc.perform(
+            MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
+        ).andExpect(status().isInternalServerError)
+        verify(postService, times(1)).removePost(post.id)
     }
 }
