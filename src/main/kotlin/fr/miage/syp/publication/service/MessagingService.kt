@@ -22,7 +22,7 @@ class MessagingService(
         @JsonProperty("published_at") val publishedAt: Instant,
         @JsonProperty("image_id") val imageId: Long,
     ) {
-        constructor(publishedPost: Post.PublishedPost) : this(
+        constructor(publishedPost: Post) : this(
             publishedPost.id,
             publishedPost.authorId,
             publishedPost.challengeId,
@@ -33,7 +33,7 @@ class MessagingService(
     }
 
     @Throws(AmqpException::class)
-    fun sendPostToBus(post: Post.PublishedPost) {
+    fun sendPostToBus(post: Post) {
         rabbitTemplate.convertAndSend(broadcastExchangeName, PUBLISH_ROUTING_KEY, PostMessage(post))
     }
 

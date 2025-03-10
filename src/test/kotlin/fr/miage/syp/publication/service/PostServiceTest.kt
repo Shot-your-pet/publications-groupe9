@@ -19,11 +19,10 @@ import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import fr.miage.syp.publication.model.Post as ModelPost
 
 
 @SpringBootTest
-class PublishedPostServiceTest {
+class PostServiceTest {
     @MockitoBean
     internal lateinit var postRepository: PostRepository
 
@@ -50,7 +49,7 @@ class PublishedPostServiceTest {
         doReturn(Optional.of(post)).`when`(postRepository).findById(postId)
         val result = postService.getPost(postId)
         assertEquals(
-            ModelPost.PublishedPost(
+            fr.miage.syp.publication.model.Post(
                 postId, post.authorId, post.challengeId, post.content, post.publishedAt, post.imageId
             ),
             result,
