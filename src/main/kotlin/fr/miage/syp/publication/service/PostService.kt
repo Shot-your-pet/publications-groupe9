@@ -17,11 +17,7 @@ class PostService private constructor(
     private val postRepository: PostRepository, private val snowflakeIdGenerator: SnowflakeIdGenerator
 ) {
     fun getPost(postId: Long): Post? = postRepository.findByIdOrNull(postId)?.let {
-        if (it.imageId != null) {
-            Post.PublishedPost(it.id, it.authorId, it.challengeId, it.content, it.publishedAt, it.imageId)
-        } else {
-            Post.DraftedPost(it.id, it.authorId, it.challengeId, it.content, it.publishedAt)
-        }
+        Post.PublishedPost(it.id, it.authorId, it.challengeId, it.content, it.publishedAt, it.imageId)
     }
 
     fun getPosts(page: Int, maxSize: Int): List<Post.PublishedPost> = postRepository.findPostByImageIdNotNull(
