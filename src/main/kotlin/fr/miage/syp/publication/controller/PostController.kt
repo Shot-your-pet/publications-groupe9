@@ -3,7 +3,9 @@ package fr.miage.syp.publication.controller
 import fr.miage.syp.publication.data.exception.ChallengeAlreadyCompletedException
 import fr.miage.syp.publication.model.NewPost
 import fr.miage.syp.publication.model.Post
+import fr.miage.syp.publication.service.MessagingService
 import fr.miage.syp.publication.service.PostService
+import org.springframework.amqp.AmqpException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
@@ -16,6 +18,7 @@ import java.util.*
 @RequestMapping("/posts")
 class PostController private constructor(
     private val postService: PostService,
+    private val messageService: MessagingService,
 ) {
     @GetMapping("/{postId}")
     fun getPost(@PathVariable postId: Long): ResponseEntity<Post> =
@@ -26,8 +29,15 @@ class PostController private constructor(
         val userId = UUID.fromString(authentication.name)
         return postService.createPostForUser(
             userId, newPost.challengeId, newPost.content, newPost.imageId
-        ).fold(onSuccess = { draftedPost ->
-            // TODO: send to bus
+        ).mapCatching { published ->
+            try {
+                messageService.sendPostToBus(published)
+                published
+            } catch (e: AmqpException) {
+                postService.removePost(published.id)
+                throw e
+            }
+        }.fold(onSuccess = { draftedPost ->
             val createdUri =
                 ServletUriComponentsBuilder.fromCurrentContextPath().path("/posts/${draftedPost.id}").build().toUri()
             ResponseEntity.created(createdUri).body(draftedPost)
