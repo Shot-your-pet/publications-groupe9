@@ -52,6 +52,10 @@ class PostService private constructor(
         }
     }
 
+    fun removePost(postId: Long) {
+        postRepository.deleteById(postId)
+    }
+
     fun setImageIdForPost(postId: Long, imageId: Long): Result<Post.PublishedPost> {
         val post = postRepository.findByIdOrNull(postId)
         return if (post == null) {
@@ -62,12 +66,7 @@ class PostService private constructor(
             val newPost = postRepository.save(post.copy(imageId = imageId))
             Result.success(
                 Post.PublishedPost(
-                    newPost.id,
-                    newPost.authorId,
-                    newPost.challengeId,
-                    newPost.content,
-                    newPost.publishedAt,
-                    imageId
+                    newPost.id, newPost.authorId, newPost.challengeId, newPost.content, newPost.publishedAt, imageId
                 )
             )
         }
