@@ -1,6 +1,6 @@
 package fr.miage.syp.publication.service
 
-import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.*
 import fr.miage.syp.publication.model.Post
 import org.springframework.amqp.AmqpException
 import org.springframework.amqp.rabbit.core.RabbitTemplate
@@ -15,14 +15,28 @@ class MessagingService(
     @Value("\${publish.timelineExchangeName}") private val timelineExchangeName: String,
     @Value("\${publish.timelineRoutingKey}") private val timelineRoutingKey: String
 ) {
+    data class PublicationMessage(
+        @JsonTypeInfo(
+            use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "type", visible = true
+        ) val content: EventContent
+    )
+
+    @JsonSubTypes(
+        JsonSubTypes.Type(value = PostMessage::class, name = "new_publication"),
+        JsonSubTypes.Type(value = LikeMessage::class, name = "like")
+    )
+    sealed interface EventContent
+
+    @JsonRootName(value = "content")
+    @JsonTypeName("new_publication")
     data class PostMessage(
         val id: Long,
         @JsonProperty("author_id") val authorId: UUID,
         @JsonProperty("challenge_id") val challengeId: Long,
         val content: String?,
-        @JsonProperty("published_at") val publishedAt: Instant,
+        @JsonProperty("date") val publishedAt: Instant,
         @JsonProperty("image_id") val imageId: Long,
-    ) {
+    ) : EventContent {
         constructor(publishedPost: Post) : this(
             publishedPost.id,
             publishedPost.authorId,
@@ -33,8 +47,13 @@ class MessagingService(
         )
     }
 
+    @JsonRootName(value = "content")
+    @JsonTypeName("like")
+    data class LikeMessage(@JsonProperty("author_id") val authorId: UUID, @JsonProperty("post_id") val postId: Long) :
+        EventContent
+
     @Throws(AmqpException::class)
     fun sendPostToBus(post: Post) {
-        rabbitTemplate.convertAndSend(timelineExchangeName, timelineRoutingKey, PostMessage(post))
+        rabbitTemplate.convertAndSend(timelineExchangeName, timelineRoutingKey, PublicationMessage(PostMessage(post)))
     }
 }

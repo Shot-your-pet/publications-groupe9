@@ -36,7 +36,7 @@ class MessagingServiceTest {
         val messagePost = MessagingService.PostMessage(post)
         doNothing().`when`(rabbitTemplate).convertAndSend(any(), any(), eq(messagePost))
         messageService.sendPostToBus(post)
-        verify(rabbitTemplate, times(1)).convertAndSend(any(), any(), eq(messagePost))
+        verify(rabbitTemplate, times(1)).convertAndSend(any(), any(), eq(MessagingService.PublicationMessage(messagePost)))
     }
 
     @Test
@@ -45,7 +45,7 @@ class MessagingServiceTest {
         val imageId = random.nextLong()
         val post = Post(postId, UUID.randomUUID(), random.nextLong(), "foo", Instant.now(), imageId)
         doThrow(AmqpException("foo")).`when`(rabbitTemplate)
-            .convertAndSend(any(), any(), any<MessagingService.PostMessage>())
+            .convertAndSend(any(), any(), any<MessagingService.PublicationMessage>())
         val ex = assertThrows<AmqpException> {
             messageService.sendPostToBus(post)
         }
