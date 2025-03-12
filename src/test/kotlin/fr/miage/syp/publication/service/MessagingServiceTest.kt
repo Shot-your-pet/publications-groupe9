@@ -1,5 +1,6 @@
 package fr.miage.syp.publication.service
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import fr.miage.syp.publication.model.Post
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -28,6 +29,9 @@ class MessagingServiceTest {
     @MockitoBean
     lateinit var rabbitTemplate: RabbitTemplate
 
+    @Autowired
+    lateinit var objectMapper: ObjectMapper
+
     @Test
     fun `sendImageToBus call rabbit template with good parameters`() {
         val postId = random.nextLong()
@@ -50,6 +54,62 @@ class MessagingServiceTest {
             messageService.sendPostToBus(post)
         }
         assertEquals("foo", ex.message)
+    }
+
+    @Test
+    fun `PostMessage event serialization match schema`() {
+        val res = """
+        {
+            "content": {
+                "id": 1,
+                "author_id": "6eb6c444-fdf8-415d-b815-fb89469ad214",
+                "challenge_id": 42,
+                "date": "2023-10-01T12:00:00Z",
+                "content": "A new publication",
+                "image_id": 123
+            },
+            "type": "new_publication"
+        }"""
+
+        val event = MessagingService.PublicationMessage(
+            MessagingService.PostMessage(
+                1L,
+                UUID.fromString("6eb6c444-fdf8-415d-b815-fb89469ad214"),
+                42L,
+                "A new publication",
+                Instant.parse("2023-10-01T12:00:00Z"),
+                123,
+            )
+        )
+
+        val initTree = objectMapper.readTree(res)
+        val resJson = objectMapper.readTree(objectMapper.writeValueAsString(event))
+
+        assertEquals(initTree, resJson)
+    }
+
+    @Test
+    fun `LikeMessage event serialization match schema`() {
+        val res = """
+        {
+            "type": "like",
+            "content": {
+                "author_id": "6eb6c444-fdf8-415d-b815-fb89469ad214",
+                "post_id": 1
+            }
+        }"""
+
+        val event = MessagingService.PublicationMessage(
+            MessagingService.LikeMessage(
+                UUID.fromString("6eb6c444-fdf8-415d-b815-fb89469ad214"),
+                1,
+            )
+        )
+
+        val initTree = objectMapper.readTree(res)
+        val resJson = objectMapper.readTree(objectMapper.writeValueAsString(event))
+
+        assertEquals(initTree, resJson)
     }
 }
 
