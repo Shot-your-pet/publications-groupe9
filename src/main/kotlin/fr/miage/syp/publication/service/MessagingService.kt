@@ -12,7 +12,8 @@ import java.util.*
 @Service
 class MessagingService(
     private val rabbitTemplate: RabbitTemplate,
-    @Value("\${publish.broadcastExchangeName}") private val broadcastExchangeName: String,
+    @Value("\${publish.timelineExchangeName}") private val timelineExchangeName: String,
+    @Value("\${publish.timelineRoutingKey}") private val timelineRoutingKey: String
 ) {
     data class PostMessage(
         val id: Long,
@@ -34,10 +35,6 @@ class MessagingService(
 
     @Throws(AmqpException::class)
     fun sendPostToBus(post: Post) {
-        rabbitTemplate.convertAndSend(broadcastExchangeName, PUBLISH_ROUTING_KEY, PostMessage(post))
-    }
-
-    companion object {
-        const val PUBLISH_ROUTING_KEY = "publish"
+        rabbitTemplate.convertAndSend(timelineExchangeName, timelineRoutingKey, PostMessage(post))
     }
 }

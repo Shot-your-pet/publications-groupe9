@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.servlet.DispatcherType
 import org.springframework.amqp.core.BindingBuilder
 import org.springframework.amqp.core.Declarables
-import org.springframework.amqp.core.FanoutExchange
+import org.springframework.amqp.core.DirectExchange
 import org.springframework.amqp.core.Queue
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter
 import org.springframework.amqp.support.converter.MessageConverter
@@ -43,17 +43,18 @@ class PublicationConfig {
     }
 
     @Bean
-    fun broadcastBindings(
-        @Value("\${publish.broadcastExchangeName}") broadcastExchangeName: String,
-        @Value("\${publish.publishPostQueueName}") publishPostQueueName: String
+    fun timelineRabbitBindings(
+        @Value("\${publish.timelineExchangeName}") timelineExchangeName: String,
+        @Value("\${publish.timelineQueueName}") timelineQueueName: String,
+        @Value("\${publish.timelineRoutingKey}") timelineRoutingKey: String
     ): Declarables {
-        val publishPostQueue = Queue(publishPostQueueName, false)
-        val fanoutExchange = FanoutExchange(broadcastExchangeName)
+        val timeQueue = Queue(timelineQueueName, false)
+        val timelineExchange = DirectExchange(timelineExchangeName, true, false)
 
         return Declarables(
-            publishPostQueue,
-            fanoutExchange,
-            BindingBuilder.bind(publishPostQueue).to(fanoutExchange),
+            timeQueue,
+            timelineExchange,
+            BindingBuilder.bind(timeQueue).to(timelineExchange).with(timelineRoutingKey),
         )
     }
 
