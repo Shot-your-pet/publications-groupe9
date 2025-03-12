@@ -1,5 +1,7 @@
 package fr.miage.syp.publication.services
 
+import org.springframework.beans.factory.config.ConfigurableBeanFactory
+import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
 import java.security.SecureRandom
 import java.util.concurrent.atomic.AtomicLong
@@ -10,11 +12,12 @@ import java.util.concurrent.atomic.AtomicLong
  * Generates a unique 64-bit ID based on timestamp, machine ID, datacenter ID, and sequence number.
  */
 @Component
+@Scope(value = ConfigurableBeanFactory.SCOPE_SINGLETON)
 internal class SnowflakeIdGenerator {
     private val lastTimestamp = AtomicLong(-1L)
     private val sequence = AtomicLong(0L)
 
-    private val machineId = SecureRandom().nextLong()
+    private val machineId = SecureRandom().nextLong(0, 32) and 0b11111
 
     /**
      * Generates the next unique Snowflake ID.
@@ -55,8 +58,8 @@ internal class SnowflakeIdGenerator {
     }
 
     companion object {
-        // Epoch timestamp in microseconds (Jan 1, 2023)
-        private const val START_TIMESTAMP = 1672531200000000L
+        // Epoch timestamp in milliseconds
+        private const val START_TIMESTAMP = 1741783382057
 
         // Number of bits allocated for Machine ID (max value: 31)
         private const val MACHINE_ID_BITS = 5L
