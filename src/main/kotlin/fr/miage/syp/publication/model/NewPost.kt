@@ -5,5 +5,5 @@ import com.fasterxml.jackson.annotation.JsonProperty
 data class NewPost(
     val content: String?,
     @JsonProperty("challenge_id") val challengeId: Long,
-    @JsonProperty("content_type") val imageId: Long,
+    @JsonProperty("image_id") val imageId: Long,
 )
