@@ -48,14 +48,19 @@ class PublicationConfig {
         @Value("\${publish.timelineQueueName}") timelineQueueName: String,
         @Value("\${publish.timelineRoutingKey}") timelineRoutingKey: String
     ): Declarables {
-        val timeQueue = Queue(timelineQueueName, false)
-        val timelineExchange = DirectExchange(timelineExchangeName, true, false)
-
-        return Declarables(
-            timeQueue,
-            timelineExchange,
-            BindingBuilder.bind(timeQueue).to(timelineExchange).with(timelineRoutingKey),
-        )
+        val timeQueue = Queue(timelineQueueName, true)
+        return if (timelineExchangeName != "") {
+            val exchange = DirectExchange(timelineExchangeName, true, false)
+            Declarables(
+                timeQueue,
+                exchange,
+                BindingBuilder.bind(timeQueue).to(exchange).with(timelineRoutingKey),
+            )
+        } else {
+            Declarables(
+                timeQueue,
+            )
+        }
     }
 
     @Bean
