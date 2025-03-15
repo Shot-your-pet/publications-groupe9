@@ -146,7 +146,7 @@ class PostControllerTest {
 
     @Test
     @WithMockUser(username = USER_UUID)
-    fun `test create post with authentication when rabbit error should internal server error`() {
+    fun `test create post with authentication when rabbit error should service unavailable`() {
         val newId = random.nextLong()
         val createPostContent = "bar"
         val challengeId = random.nextLong()
@@ -165,7 +165,7 @@ class PostControllerTest {
         val content = mapper.writeValueAsString(NewPost(createPostContent, challengeId, imageId))
         mvc.perform(
             MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
-        ).andExpect(status().isInternalServerError)
+        ).andExpect(status().isServiceUnavailable)
         verify(postService, times(1)).removePost(post.id)
     }
 }
