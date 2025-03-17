@@ -1,6 +1,7 @@
 package fr.miage.syp.publication.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import fr.miage.syp.publication.service.MessagingService
 import jakarta.servlet.DispatcherType
 import org.springframework.amqp.core.BindingBuilder
 import org.springframework.amqp.core.Declarables
@@ -8,9 +9,11 @@ import org.springframework.amqp.core.DirectExchange
 import org.springframework.amqp.core.Queue
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter
 import org.springframework.amqp.support.converter.MessageConverter
+import org.springframework.aot.hint.annotation.RegisterReflectionForBinding
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.ImportRuntimeHints
 import org.springframework.http.HttpMethod
 import org.springframework.security.config.Customizer
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -21,6 +24,13 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 
 @Configuration
+@ImportRuntimeHints(RegistrarHints::class)
+@RegisterReflectionForBinding(
+    MessagingService.PostMessage::class,
+    MessagingService.EventContent::class,
+    MessagingService.PublicationMessage::class,
+    MessagingService.LikeMessage::class,
+)
 class PublicationConfig {
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain =
