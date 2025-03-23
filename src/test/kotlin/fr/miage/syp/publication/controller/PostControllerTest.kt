@@ -100,7 +100,7 @@ class PostControllerTest {
         )
         val content = mapper.writeValueAsString(NewPost(null, imageId))
         val result = mvc.perform(
-            MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
+            MockMvcRequestBuilders.post("/posts").contentType(MediaType.APPLICATION_JSON).content(content)
         ).andReturn()
         mvc.perform(
             asyncDispatch(result)
@@ -123,7 +123,7 @@ class PostControllerTest {
         doNothing().`when`(messagingService).sendPostToBus(post)
         val content = mapper.writeValueAsString(NewPost(createPostContent, imageId))
         val results = mvc.perform(
-            MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
+            MockMvcRequestBuilders.post("/posts").contentType(MediaType.APPLICATION_JSON).content(content)
         ).andReturn()
         mvc.perform(
             asyncDispatch(results)
@@ -146,7 +146,7 @@ class PostControllerTest {
 
         val content = mapper.writeValueAsString(NewPost(createPostContent, imageId))
         val result = mvc.perform(
-            MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
+            MockMvcRequestBuilders.post("/posts").contentType(MediaType.APPLICATION_JSON).content(content)
         ).andReturn()
         mvc.perform(asyncDispatch(result)).andExpect(status().isConflict)
 
@@ -171,7 +171,7 @@ class PostControllerTest {
         doNothing().`when`(postService).removePost(post.id)
         val content = mapper.writeValueAsString(NewPost(createPostContent, imageId))
         val result = mvc.perform(
-            MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
+            MockMvcRequestBuilders.post("/posts").contentType(MediaType.APPLICATION_JSON).content(content)
         ).andReturn()
         mvc.perform(asyncDispatch(result)).andExpect(status().isServiceUnavailable)
         verify(postService, times(1)).removePost(post.id)

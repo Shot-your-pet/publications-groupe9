@@ -39,7 +39,7 @@ class PublicationConfig {
         http.csrf { it.disable() }.authorizeHttpRequests { auth ->
             auth.requestMatchers(HttpMethod.OPTIONS, "/posts/**").authenticated()
                 .requestMatchers(HttpMethod.GET, "/posts/**").authenticated()
-                .requestMatchers(HttpMethod.POST, "/posts/").authenticated()
+                .requestMatchers(HttpMethod.POST, "/posts").authenticated()
                 .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll() // todo
                 .anyRequest().denyAll()
         }.oauth2ResourceServer { oauth2ResourceServer -> oauth2ResourceServer.jwt(Customizer.withDefaults()) }

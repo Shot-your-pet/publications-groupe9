@@ -28,11 +28,9 @@ class PostController private constructor(
     fun getPost(@PathVariable postId: Long): ResponseEntity<Post> =
         postService.getPost(postId)?.let { ResponseEntity.ok(it) } ?: ResponseEntity.notFound().build()
 
-    @PostMapping("/")
+    @PostMapping
     suspend fun insertPost(
-        @RequestBody newPost: NewPost,
-        authentication: Authentication,
-        httpRequest: HttpServletRequest
+        @RequestBody newPost: NewPost, authentication: Authentication, httpRequest: HttpServletRequest
     ): ResponseEntity<Post> {
         val userId = UUID.fromString(authentication.name)
         return postService.createPostForUser(
