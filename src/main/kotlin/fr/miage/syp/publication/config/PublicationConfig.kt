@@ -30,6 +30,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
     MessagingService.EventContent::class,
     MessagingService.PublicationMessage::class,
     MessagingService.LikeMessage::class,
+    MessagingService.DailyChallenge::class,
+    MessagingService.Challenge::class,
 )
 class PublicationConfig {
     @Bean
