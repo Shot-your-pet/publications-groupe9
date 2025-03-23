@@ -36,7 +36,7 @@ class MessagingServiceTest {
     fun `sendImageToBus call rabbit template with good parameters`() {
         val postId = random.nextLong()
         val imageId = random.nextLong()
-        val post = Post(postId, UUID.randomUUID(), random.nextLong(), "foo", Instant.now(), imageId)
+        val post = Post(postId, UUID.randomUUID(), UUID.randomUUID(), "foo", Instant.now(), imageId)
         val messagePost = MessagingService.PostMessage(post)
         doNothing().`when`(rabbitTemplate).convertAndSend(any(), any(), eq(messagePost))
         messageService.sendPostToBus(post)
@@ -47,7 +47,7 @@ class MessagingServiceTest {
     fun `sendImageToBus on exception propagate said exception`() {
         val postId = random.nextLong()
         val imageId = random.nextLong()
-        val post = Post(postId, UUID.randomUUID(), random.nextLong(), "foo", Instant.now(), imageId)
+        val post = Post(postId, UUID.randomUUID(), UUID.randomUUID(), "foo", Instant.now(), imageId)
         doThrow(AmqpException("foo")).`when`(rabbitTemplate)
             .convertAndSend(any(), any(), any<MessagingService.PublicationMessage>())
         val ex = assertThrows<AmqpException> {
@@ -63,7 +63,7 @@ class MessagingServiceTest {
             "content": {
                 "id": 1,
                 "author_id": "6eb6c444-fdf8-415d-b815-fb89469ad214",
-                "challenge_id": 42,
+                "challenge_id": "42b6c444-fdf8-415d-b815-fb89469ad214",
                 "date": "2023-10-01T12:00:00Z",
                 "content": "A new publication",
                 "image_id": 123
@@ -75,7 +75,7 @@ class MessagingServiceTest {
             MessagingService.PostMessage(
                 1L,
                 UUID.fromString("6eb6c444-fdf8-415d-b815-fb89469ad214"),
-                42L,
+                UUID.fromString("42b6c444-fdf8-415d-b815-fb89469ad214"),
                 "A new publication",
                 Instant.parse("2023-10-01T12:00:00Z"),
                 123,

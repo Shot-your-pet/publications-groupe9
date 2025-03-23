@@ -8,6 +8,6 @@ import java.util.*
 
 @Repository
 interface PostRepository : MongoRepository<Post, Long> {
-    fun existsPostByAuthorIdAndChallengeId(authorId: UUID, challengeId: Long): Boolean
+    fun existsPostByAuthorIdAndChallengeId(authorId: UUID, challengeId: UUID): Boolean
     fun findPostByImageIdNotNull(pageable: Pageable): List<Post>
 }

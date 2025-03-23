@@ -1,13 +1,18 @@
 package fr.miage.syp.publication.service
 
 import fr.miage.syp.publication.data.exception.ChallengeAlreadyCompletedException
+import fr.miage.syp.publication.data.exception.NoChallengeException
 import fr.miage.syp.publication.data.model.Post
 import fr.miage.syp.publication.data.repository.PostRepository
+import fr.miage.syp.publication.service.MessagingService.DailyChallenge
 import fr.miage.syp.publication.services.SnowflakeIdGenerator
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.Mockito.*
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.wheneverBlocking
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.data.domain.PageRequest
@@ -27,6 +32,12 @@ class PostServiceTest {
     internal lateinit var postRepository: PostRepository
 
     @MockitoBean
+    internal lateinit var timeProvider: TimeProvider
+
+    @MockitoBean
+    internal lateinit var messagingService: MessagingService
+
+    @MockitoBean
     internal lateinit var snowflakeIdGenerator: SnowflakeIdGenerator
 
     @Autowired
@@ -40,7 +51,7 @@ class PostServiceTest {
         val post = Post(
             id = postId,
             authorId = UUID.randomUUID(),
-            challengeId = random.nextLong(),
+            challengeId = UUID.randomUUID(),
             content = "Content",
             publishedAt = Instant.now(),
             imageId = random.nextLong(),
@@ -75,7 +86,7 @@ class PostServiceTest {
         val postEntity = Post(
             id = 1,
             authorId = authorId,
-            challengeId = Random().nextLong(),
+            challengeId = UUID.randomUUID(),
             content = "content",
             publishedAt = Instant.now(),
             imageId = 50L,
@@ -134,7 +145,7 @@ class PostServiceTest {
             Post(
                 id = it.toLong(),
                 authorId = UUID.randomUUID(),
-                challengeId = it.toLong() + 150L,
+                challengeId = UUID.randomUUID(),
                 content = "content$it",
                 publishedAt = Instant.now(),
                 imageId = it.toLong(),
@@ -162,63 +173,111 @@ class PostServiceTest {
 
     @Test
     fun `create post without content should create post`() {
-        withMockedInstant { now ->
-            val newId = 125L
-            val uuid = UUID.randomUUID()
-            val challengeId = random.nextLong()
-            val imageId = random.nextLong()
-            val createdPost = Post(
-                newId, uuid, challengeId, null, now, imageId, emptyList()
+        val now = Instant.now()
+        val newId = 125L
+        val uuid = UUID.randomUUID()
+        val challengeId = UUID.randomUUID()
+        val imageId = random.nextLong()
+        val createdPost = Post(
+            newId, uuid, challengeId, null, now, imageId, emptyList()
+        )
+
+        wheneverBlocking {
+            messagingService.getCurrentChallenge()
+        }.doReturn(
+            DailyChallenge(
+                challengeId, Instant.now(), Instant.now(), MessagingService.Challenge("foo", "bar")
             )
+        )
+        doReturn(newId).`when`(snowflakeIdGenerator).nextId(anyLong())
+        doReturn(createdPost).`when`(postRepository).save(createdPost)
+        doReturn(false).`when`(postRepository).existsPostByAuthorIdAndChallengeId(uuid, challengeId)
+        doReturn(now).`when`(timeProvider).getNow()
 
-            doReturn(newId).`when`(snowflakeIdGenerator).nextId(anyLong())
-            doReturn(createdPost).`when`(postRepository).save(createdPost)
+        val createdId = runBlocking { postService.createPostForUser(uuid, null, imageId) }
 
-            val createdId = postService.createPostForUser(uuid, challengeId, null, imageId)
-
-            Assertions.assertEquals(newId, createdId.getOrThrow().id)
-            verify(postRepository, times(1)).save(createdPost)
-        }
+        Assertions.assertEquals(newId, createdId.getOrThrow().id)
+        verify(postRepository, times(1)).existsPostByAuthorIdAndChallengeId(uuid, challengeId)
+        verify(postRepository, times(1)).save(createdPost)
     }
 
     @Test
     fun `create post with content should create post`() {
-        withMockedInstant { now ->
-            val newId = 125L
-            val uuid = UUID.randomUUID()
-            val challengeId = Random().nextLong()
-            val imageId = random.nextLong()
-            val createdPost = Post(
-                newId, uuid, challengeId, "foo", now, imageId, emptyList()
+        val now = Instant.now()
+        val newId = 125L
+        val uuid = UUID.randomUUID()
+        val challengeId = UUID.randomUUID()
+        val imageId = random.nextLong()
+        val createdPost = Post(
+            newId, uuid, challengeId, "foo", now, imageId, emptyList()
+        )
+
+        doReturn(newId).`when`(snowflakeIdGenerator).nextId(anyLong())
+        doReturn(createdPost).`when`(postRepository).save(createdPost)
+        doReturn(now).`when`(timeProvider).getNow()
+        wheneverBlocking {
+            messagingService.getCurrentChallenge()
+        }.doReturn(
+            DailyChallenge(
+                challengeId, Instant.now(), Instant.now(), MessagingService.Challenge("foo", "bar")
             )
+        )
 
-            doReturn(newId).`when`(snowflakeIdGenerator).nextId(anyLong())
-            doReturn(createdPost).`when`(postRepository).save(createdPost)
+        val createdId = runBlocking { postService.createPostForUser(uuid, "foo", imageId) }
 
-            val createdId = postService.createPostForUser(uuid, challengeId, "foo", imageId)
+        Assertions.assertEquals(newId, createdId.getOrThrow().id)
+        verify(postRepository, times(1)).save(createdPost)
 
-            Assertions.assertEquals(newId, createdId.getOrThrow().id)
-            verify(postRepository, times(1)).save(createdPost)
-        }
     }
 
     @Test
     fun `create post with same challenge should fail`() {
-        withMockedInstant { now ->
-            val newId = 125L
-            val uuid = UUID.randomUUID()
-            val challengeId = Random().nextLong()
-            val imageId = random.nextLong()
-            val createdPost = Post(
-                newId, uuid, challengeId, "foo", now, imageId, emptyList()
+        val now = Instant.now()
+        val newId = 125L
+        val uuid = UUID.randomUUID()
+        val challengeId = UUID.randomUUID()
+        val imageId = random.nextLong()
+        val createdPost = Post(
+            newId, uuid, challengeId, "foo", now, imageId, emptyList()
+        )
+
+        doReturn(true).`when`(postRepository).existsPostByAuthorIdAndChallengeId(uuid, challengeId)
+        doReturn(now).`when`(timeProvider).getNow()
+        wheneverBlocking {
+            messagingService.getCurrentChallenge()
+        }.doReturn(
+            DailyChallenge(
+                challengeId, Instant.now(), Instant.now(), MessagingService.Challenge("foo", "bar")
             )
+        )
 
-            doReturn(true).`when`(postRepository).existsPostByAuthorIdAndChallengeId(uuid, challengeId)
-            val createdId = postService.createPostForUser(uuid, challengeId, "foo", imageId)
+        val createdId = runBlocking { postService.createPostForUser(uuid, "foo", imageId) }
 
-            Assertions.assertTrue(createdId.exceptionOrNull() is ChallengeAlreadyCompletedException)
-            verify(postRepository, times(0)).save(createdPost)
-        }
+        Assertions.assertTrue(createdId.exceptionOrNull() is ChallengeAlreadyCompletedException)
+        verify(postRepository, times(0)).save(createdPost)
+    }
+
+    @Test
+    fun `create post without challenge should fail`() {
+        val now = Instant.now()
+        val newId = 125L
+        val uuid = UUID.randomUUID()
+        val challengeId = UUID.randomUUID()
+        val imageId = random.nextLong()
+        val createdPost = Post(
+            newId, uuid, challengeId, "foo", now, imageId, emptyList()
+        )
+
+        doReturn(true).`when`(postRepository).existsPostByAuthorIdAndChallengeId(uuid, challengeId)
+        doReturn(now).`when`(timeProvider).getNow()
+        wheneverBlocking {
+            messagingService.getCurrentChallenge()
+        }.doReturn(null)
+
+        val createdId = runBlocking { postService.createPostForUser(uuid, "foo", imageId) }
+
+        Assertions.assertTrue(createdId.exceptionOrNull() is NoChallengeException)
+        verify(postRepository, times(0)).save(createdPost)
     }
 
     @Test
@@ -227,17 +286,5 @@ class PostServiceTest {
         doNothing().`when`(postRepository).deleteById(id)
         postService.removePost(id)
         verify(postRepository, times(1)).deleteById(id)
-    }
-
-    fun withMockedInstant(block: (now: Instant) -> Unit) {
-        val now = Instant.now()
-        mockStatic(
-            Instant::class.java, withSettings().defaultAnswer { invocation -> invocation.callRealMethod() }).use {
-            it.`when`<Instant> {
-                Instant.now()
-            }.thenReturn(now)
-
-            block(now)
-        }
     }
 }

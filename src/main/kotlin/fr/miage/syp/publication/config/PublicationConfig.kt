@@ -56,19 +56,23 @@ class PublicationConfig {
     fun timelineRabbitBindings(
         @Value("\${publish.timelineExchangeName}") timelineExchangeName: String,
         @Value("\${publish.timelineQueueName}") timelineQueueName: String,
-        @Value("\${publish.timelineRoutingKey}") timelineRoutingKey: String
+        @Value("\${publish.timelineRoutingKey}") timelineRoutingKey: String,
+        @Value("\${publish.getChallengeQueue}") getChallengeQueue: String,
     ): Declarables {
         val timeQueue = Queue(timelineQueueName, true)
+        val challengeQueryQueue = Queue(getChallengeQueue, true)
         return if (timelineExchangeName != "") {
             val exchange = DirectExchange(timelineExchangeName, true, false)
             Declarables(
                 timeQueue,
                 exchange,
                 BindingBuilder.bind(timeQueue).to(exchange).with(timelineRoutingKey),
+                challengeQueryQueue,
             )
         } else {
             Declarables(
                 timeQueue,
+                challengeQueryQueue,
             )
         }
     }

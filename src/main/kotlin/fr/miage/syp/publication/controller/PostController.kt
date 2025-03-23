@@ -5,6 +5,7 @@ import fr.miage.syp.publication.model.NewPost
 import fr.miage.syp.publication.model.Post
 import fr.miage.syp.publication.service.MessagingService
 import fr.miage.syp.publication.service.PostService
+import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.LoggerFactory
 import org.springframework.amqp.AmqpException
 import org.springframework.http.HttpStatus
@@ -28,10 +29,14 @@ class PostController private constructor(
         postService.getPost(postId)?.let { ResponseEntity.ok(it) } ?: ResponseEntity.notFound().build()
 
     @PostMapping("/")
-    fun insertPost(@RequestBody newPost: NewPost, authentication: Authentication): ResponseEntity<Post> {
+    suspend fun insertPost(
+        @RequestBody newPost: NewPost,
+        authentication: Authentication,
+        httpRequest: HttpServletRequest
+    ): ResponseEntity<Post> {
         val userId = UUID.fromString(authentication.name)
         return postService.createPostForUser(
-            userId, newPost.challengeId, newPost.content, newPost.imageId
+            userId, newPost.content, newPost.imageId
         ).mapCatching { published ->
             try {
                 messageService.sendPostToBus(published)
@@ -42,7 +47,7 @@ class PostController private constructor(
             }
         }.fold(onSuccess = { draftedPost ->
             val createdUri =
-                ServletUriComponentsBuilder.fromCurrentContextPath().path("/posts/${draftedPost.id}").build().toUri()
+                ServletUriComponentsBuilder.fromRequestUri(httpRequest).path("/${draftedPost.id}").build().toUri()
             ResponseEntity.created(createdUri).body(draftedPost)
         }, onFailure = {
             if (it is ChallengeAlreadyCompletedException) {

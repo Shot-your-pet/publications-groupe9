@@ -18,6 +18,7 @@ import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 import java.time.Instant
@@ -54,15 +55,14 @@ class PostControllerTest {
     fun `getPost should return 200 OK when published post is found`() {
         val postId = random.nextLong()
         val authorId = UUID.randomUUID()
-        val challengeId = random.nextLong()
+        val challengeId = UUID.randomUUID()
         val imageId = random.nextLong()
         val post = Post(postId, authorId, challengeId, "Content", Instant.now(), imageId)
         doReturn(post).`when`(postService).getPost(postId)
         mvc.perform(
             get("/posts/$postId").contentType(MediaType.APPLICATION_JSON)
         ).andExpect(status().isOk).andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$.id").value(postId))
-            .andExpect(jsonPath("$.content").value("Content"))
+            .andExpect(jsonPath("$.id").value(postId)).andExpect(jsonPath("$.content").value("Content"))
     }
 
     @Test
@@ -84,23 +84,26 @@ class PostControllerTest {
     @Test
     @WithMockUser(username = USER_UUID)
     fun `test create post with authentication no content create object`() {
+
         val newId = random.nextLong()
         val authorId = UUID.fromString(USER_UUID)
-        val challengeId = random.nextLong()
+        val challengeId = UUID.randomUUID()
         val imageId = random.nextLong()
         val post = Post(
             newId, authorId, challengeId, null, Instant.now(), imageId
         )
         doNothing().`when`(messagingService).sendPostToBus(post)
-
-        doReturn(
+        wheneverBlocking { postService.createPostForUser(authorId, null, imageId) }.doReturn(
             Result.success(
                 post
             )
-        ).`when`(postService).createPostForUser(authorId, challengeId, null, imageId)
-        val content = mapper.writeValueAsString(NewPost(null, challengeId, imageId))
-        mvc.perform(
+        )
+        val content = mapper.writeValueAsString(NewPost(null, imageId))
+        val result = mvc.perform(
             MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
+        ).andReturn()
+        mvc.perform(
+            asyncDispatch(result)
         ).andExpect(status().isCreated).andExpect(jsonPath("$.id").value(newId))
         verify(messagingService, times(1)).sendPostToBus(post)
     }
@@ -110,21 +113,20 @@ class PostControllerTest {
     fun `test create post with authentication with content create object`() {
         val newId = random.nextLong()
         val createPostContent = "bar"
-        val challengeId = random.nextLong()
+        val challengeId = UUID.randomUUID()
         val authorId = UUID.fromString(USER_UUID)
         val imageId = random.nextLong()
         val post = Post(
-            newId, authorId, challengeId, null, Instant.now(), imageId
+            newId, authorId, challengeId, createPostContent, Instant.now(), imageId
         )
-        doReturn(
-            Result.success(
-                post
-            )
-        ).`when`(postService).createPostForUser(authorId, challengeId, createPostContent, imageId)
+        wheneverBlocking { postService.createPostForUser(authorId, createPostContent, imageId) }.doReturn(Result.success(post))
         doNothing().`when`(messagingService).sendPostToBus(post)
-        val content = mapper.writeValueAsString(NewPost(createPostContent, challengeId, imageId))
-        mvc.perform(
+        val content = mapper.writeValueAsString(NewPost(createPostContent, imageId))
+        val results = mvc.perform(
             MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
+        ).andReturn()
+        mvc.perform(
+            asyncDispatch(results)
         ).andExpect(status().isCreated).andExpect(jsonPath("$.id").value(newId))
         verify(messagingService, times(1)).sendPostToBus(post)
     }
@@ -133,14 +135,21 @@ class PostControllerTest {
     @WithMockUser(username = USER_UUID)
     fun `test create post with authentication with already taken challenge should return conflict`() {
         val createPostContent = "bar"
-        val challengeId = random.nextLong()
         val imageId = random.nextLong()
-        doReturn(Result.failure<Post>(ChallengeAlreadyCompletedException())).`when`(postService)
-            .createPostForUser(UUID.fromString(USER_UUID), challengeId, createPostContent, imageId)
-        val content = mapper.writeValueAsString(NewPost(createPostContent, challengeId, imageId))
-        mvc.perform(
+        wheneverBlocking {
+            postService.createPostForUser(
+                UUID.fromString(USER_UUID), createPostContent, imageId
+            )
+        }.thenReturn(
+            Result.failure(ChallengeAlreadyCompletedException())
+        )
+
+        val content = mapper.writeValueAsString(NewPost(createPostContent, imageId))
+        val result = mvc.perform(
             MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
-        ).andExpect(status().isConflict)
+        ).andReturn()
+        mvc.perform(asyncDispatch(result)).andExpect(status().isConflict)
+
         verify(messagingService, times(0)).sendPostToBus(any<Post>())
     }
 
@@ -149,23 +158,22 @@ class PostControllerTest {
     fun `test create post with authentication when rabbit error should service unavailable`() {
         val newId = random.nextLong()
         val createPostContent = "bar"
-        val challengeId = random.nextLong()
+        val challengeId = UUID.randomUUID()
         val authorId = UUID.fromString(USER_UUID)
         val imageId = random.nextLong()
         val post = Post(
             newId, authorId, challengeId, null, Instant.now(), imageId
         )
-        doReturn(
-            Result.success(
-                post
-            )
-        ).`when`(postService).createPostForUser(authorId, challengeId, createPostContent, imageId)
+        wheneverBlocking {
+            postService.createPostForUser(authorId, createPostContent, imageId)
+        }.doReturn(Result.success(post))
         doThrow(AmqpException("foo")).`when`(messagingService).sendPostToBus(post)
         doNothing().`when`(postService).removePost(post.id)
-        val content = mapper.writeValueAsString(NewPost(createPostContent, challengeId, imageId))
-        mvc.perform(
+        val content = mapper.writeValueAsString(NewPost(createPostContent, imageId))
+        val result = mvc.perform(
             MockMvcRequestBuilders.post("/posts/").contentType(MediaType.APPLICATION_JSON).content(content)
-        ).andExpect(status().isServiceUnavailable)
+        ).andReturn()
+        mvc.perform(asyncDispatch(result)).andExpect(status().isServiceUnavailable)
         verify(postService, times(1)).removePost(post.id)
     }
 }
