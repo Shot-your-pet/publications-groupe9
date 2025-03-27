@@ -62,7 +62,7 @@ class PostControllerTest {
         mvc.perform(
             get("/posts/$postId").contentType(MediaType.APPLICATION_JSON)
         ).andExpect(status().isOk).andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$.id").value(postId)).andExpect(jsonPath("$.content").value("Content"))
+            .andExpect(jsonPath("$.contenu.id").value(postId)).andExpect(jsonPath("$.contenu.content").value("Content"))
     }
 
     @Test
@@ -104,7 +104,7 @@ class PostControllerTest {
         ).andReturn()
         mvc.perform(
             asyncDispatch(result)
-        ).andExpect(status().isCreated).andExpect(jsonPath("$.id").value(newId))
+        ).andExpect(status().isCreated).andExpect(jsonPath("$.contenu.id").value(newId))
         verify(messagingService, times(1)).sendPostToBus(post)
     }
 
@@ -127,7 +127,7 @@ class PostControllerTest {
         ).andReturn()
         mvc.perform(
             asyncDispatch(results)
-        ).andExpect(status().isCreated).andExpect(jsonPath("$.id").value(newId))
+        ).andExpect(status().isCreated).andExpect(jsonPath("$.contenu.id").value(newId))
         verify(messagingService, times(1)).sendPostToBus(post)
     }
 
@@ -149,6 +149,7 @@ class PostControllerTest {
             MockMvcRequestBuilders.post("/posts").contentType(MediaType.APPLICATION_JSON).content(content)
         ).andReturn()
         mvc.perform(asyncDispatch(result)).andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value(409))
 
         verify(messagingService, times(0)).sendPostToBus(any<Post>())
     }
