@@ -71,4 +71,8 @@ tasks.withType<BootBuildImage> {
         docker.publishRegistry.username = username
         docker.publishRegistry.password = System.getenv("GITHUB_TOKEN") ?: "INVALID_PASSWORD"
     }
+
+    if (System.getenv("TARGET_PLATFORM") == "arm64") {
+        environment = mapOf("BP_NATIVE_IMAGE_BUILD_ARGUMENTS" to "-H:PageSize=65536")
+    }
 }
